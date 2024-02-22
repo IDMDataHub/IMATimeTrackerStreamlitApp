@@ -5,13 +5,14 @@
 **IMATimeTrackerStreamlitApp** est une suite d'applications Streamlit conçues pour faciliter le suivi et la gestion du temps dans un contexte professionnel. Cette suite se compose de deux applications principales : une pour les employés (`time_entry.py`) et une pour les managers (`time_entry_manager.py`). Ces outils permettent une saisie intuitive du temps, un suivi des projets, et offrent des fonctionnalités de reporting et de gestion.
 
 ### Fonctionnalités de `time_entry.py`
-- **Saisie du Temps** : Permet aux employés d'enregistrer le temps consacré à différents projets ou tâches.
-- **Visualisation Hebdomadaire** : Affiche le temps passé par semaine pour faciliter le suivi et la planification.
+- **Authentification des Utilisateurs** : Connexion sécurisée pour les employés.
+- **Saisie et Modification du Temps** : Permet aux employés de saisir et de modifier le temps consacré à différents projets ou tâches.
+- **Visualisation et Édition des Données** : Affiche le temps passé par semaine ou par année, avec possibilité de visualiser et d'éditer les données historiques.
 
 ### Fonctionnalités de `time_entry_manager.py`
-- **Suivi du Temps des Employés** : Offre aux managers une vue d'ensemble du temps enregistré par les membres de l'équipe.
-- **Analyse des Données** : Permet une analyse approfondie du temps passé sur différents projets pour une meilleure allocation des ressources.
-- **Gestion des Projets et des Employés** : Les managers peuvent gérer les affectations de projets et surveiller la charge de travail des employés.
+- **Gestion des ARCs et des Études** : Permet de gérer les informations des assistants de projet (ARCs) et des études.
+- **Suivi et Visualisation des Données** : Offre une visualisation détaillée du temps passé sur différents projets, à la fois sous forme de tableaux et de graphiques.
+- **Tableaux de Bord Compréhensifs** : Inclut des dashboards pour chaque ARC et un tableau de bord général pour une vue d'ensemble.
 
 ## *Commencer*
 Pour lancer une application, naviguez vers le répertoire contenant le script et exécutez l'une des commandes suivantes dans votre terminal :
