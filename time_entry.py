@@ -16,8 +16,10 @@ import os
 # Configuration et constantes
 DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpements informatiques/IMATimeTrackerStreamlitApp/Data/"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
-ANNEES = [2023, 2024, 2025, 2026]
+ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE']
+INT_CATEGORIES = CATEGORIES[3:-1]
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -99,14 +101,16 @@ def check_create_weekly_file(arc, year, week):
     except pd.errors.EmptyDataError:
         st.error("Aucune étude n'a été affectées. Merci de voir avec vos managers.")
         # Créer un nouveau DataFrame avec des colonnes par défaut et le sauvegarder
-        columns = ['YEAR', 'WEEK', 'STUDY', 'GENERAL', 'MEETING', 'TRAINING', 'MONITORING', 'REMOTE', 'COMMENT']
+        columns = CATEGORIES
+
         df_new = pd.DataFrame(columns=columns)
         df_new.to_csv(file_path, index=False, sep=';', encoding='utf-8')
         return None
 
     assigned_studies = load_assigned_studies(arc)
-    rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'GENERAL': 0, 'MEETING': 0, 
-             'TRAINING': 0, 'MONITORING': 0, 'REMOTE': 0, 'COMMENT': "Aucun"} for study in assigned_studies]
+    rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+             'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
+             'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
     pd.DataFrame(rows).to_csv(file_path, index=False, sep=";", encoding='utf-8')
     return file_path
 
@@ -129,6 +133,7 @@ def delete_ongoing_file(arc):
 
 def main():
     st.set_page_config(layout="wide")
+    st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
@@ -154,11 +159,9 @@ def main():
     filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
 
     # Convertir certaines colonnes en entiers
-    filtered_df1['GENERAL'] = filtered_df1['GENERAL'].astype(int)
-    filtered_df1['MEETING'] = filtered_df1['MEETING'].astype(int)
-    filtered_df1['TRAINING'] = filtered_df1['TRAINING'].astype(int)
-    filtered_df1['MONITORING'] = filtered_df1['MONITORING'].astype(int)
-    filtered_df1['REMOTE'] = filtered_df1['REMOTE'].astype(int)
+    int_columns = INT_CATEGORIES
+    filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
+
 
     # Appliquer le style
     styled_df = filtered_df1.style.format({
@@ -204,7 +207,7 @@ def main():
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
 
                 # Remplacer les valeurs dans Ongoing avec celles de Time si elles ne sont pas 0
-                columns_to_update = ['GENERAL', 'MEETING', 'TRAINING', 'MONITORING', 'REMOTE', 'COMMENT']
+                columns_to_update = CATEGORIES[3:]
                 for col in columns_to_update:
                     merged_df[col + '_ongoing'] = merged_df.apply(
                         lambda row: row[col + '_time'] if not pd.isna(row[col + '_time']) and row[col + '_ongoing'] == 0 else row[col + '_ongoing'], axis=1)
@@ -212,8 +215,12 @@ def main():
                 # Ajouter des lignes pour les nouvelles études assignées manquantes
                 for study in assigned_studies:
                     if study not in merged_df['STUDY'].tolist():
-                        new_row = pd.DataFrame([{**{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}, **{col + '_ongoing': 0 for col in columns_to_update[:-1]}, **{'COMMENT_ongoing': "Aucun"}}])
+                        new_row_data = {'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}
+                        new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:-1]})
+                        new_row_data['COMMENTAIRE_ongoing'] = "Aucun"
+                        new_row = pd.DataFrame([new_row_data])
                         merged_df = pd.concat([merged_df, new_row], ignore_index=True)
+
 
                 # Filtrer les colonnes pour éliminer celles avec '_time'
                 filtered_columns = [col for col in merged_df.columns if '_time' not in col]
@@ -227,8 +234,9 @@ def main():
         else:
             # time_df est complètement vide
             assigned_studies = set(load_assigned_studies(arc))
-            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'GENERAL': 0, 'MEETING': 0, 
-                     'TRAINING': 0, 'MONITORING': 0, 'REMOTE': 0, 'COMMENT': "Aucun"} for study in assigned_studies]
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+                     'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
+                     'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
 

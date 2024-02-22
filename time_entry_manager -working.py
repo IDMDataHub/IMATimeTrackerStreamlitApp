@@ -1,7 +1,3 @@
-#####################################################################
-# =========================== LIBRAIRIES ========================== #
-#####################################################################
-
 import streamlit as st
 import pandas as pd
 import os
@@ -10,27 +6,13 @@ import locale
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-#####################################################################
-# =========================== CONSTANTES ========================== #
-#####################################################################
-
-
 # Chemin vers le dossier contenant les fichiers de données
 DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpements informatiques/IMATimeTrackerStreamlitApp/Data/"
 
 # Fichier contenant les informations des ARC et des études
 ARC_INFO_FILE = "ARC_MDP.csv"
 STUDY_INFO_FILE = "STUDY.csv"
-ANNEES = list(range(2024, 2030))
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE']
-INT_CATEGORIES = CATEGORIES[3:-1]
-MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
-
-# Création d'une palette "viridis" avec le nombre approprié de couleurs
-viridis_palette = sns.color_palette("viridis", len(INT_CATEGORIES))
-
-# Mapping des catégories aux couleurs de la palette "viridis"
-category_colors = {category: color for category, color in zip(INT_CATEGORIES, viridis_palette)}
+ANNEES = [2024, 2025, 2026]
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -40,10 +22,37 @@ def load_arc_passwords():
 
 ARC_PASSWORDS = load_arc_passwords()
 
+# Nombre de catégories
+num_categories = 8
 
-#####################################################################
-# ==================== FONCTIONS D'ASSISTANCES ==================== #
-#####################################################################
+# Création d'une palette "viridis" avec le nombre approprié de couleurs
+viridis_palette = sns.color_palette("viridis", num_categories)
+
+# Mapping des catégories aux couleurs de la palette "viridis"
+category_colors = {
+    'VISITES PATIENT': viridis_palette[0],
+    'QUERIES': viridis_palette[1],
+    'SAISIE CRF': viridis_palette[2],
+    'REUNIONS': viridis_palette[3],
+    'REMOTE': viridis_palette[4],
+    'MONITORING': viridis_palette[5],
+    'TRAINING': viridis_palette[6],
+    'ARCHIVAGE EMAIL': viridis_palette[7]
+}
+
+# Fonction pour créer un camembert
+def plot_pie_chart(df_study_sum, title):
+    colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
+    
+    fig, ax = plt.subplots(figsize=(8, 8))
+    wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
+
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_size(10)
+
+    ax.set_title(title)
+    st.pyplot(fig)
 
 
 def load_data(DATA_FOLDER, arc):
@@ -92,7 +101,8 @@ def create_time_files_for_arcs(df):
         if pd.notna(arc_name):  # Vérifier si le nom de l'ARC n'est pas vide
             time_file_path = os.path.join(DATA_FOLDER, f"Time_{arc_name}.csv")
             if not os.path.exists(time_file_path):
-                columns = CATEGORIES
+                columns = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 
+                'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE']
                 new_df = pd.DataFrame(columns=columns)
                 new_df.to_csv(time_file_path, index=False, sep=';', encoding='utf-8')
 
@@ -101,7 +111,8 @@ def create_ongoing_files_for_arcs(df):
         if pd.notna(arc_name):  # Vérifier si le nom de l'ARC n'est pas vide
             ongoing_file_path = os.path.join(DATA_FOLDER, f"Ongoing_{arc_name}.csv")
             if not os.path.exists(ongoing_file_path):
-                columns = CATEGORIES
+                columns = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 
+                'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE']
                 new_df = pd.DataFrame(columns=columns)
                 new_df.to_csv(ongoing_file_path, index=False, sep=';', encoding='utf-8')
 
@@ -137,24 +148,7 @@ def create_bar_chart(data, title, week_or_month):
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
-    # Fonction pour créer un camembert
-def plot_pie_chart(df_study_sum, title):
-    colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
     
-    fig, ax = plt.subplots(figsize=(8, 8))
-    wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
-
-    for autotext in autotexts:
-        autotext.set_color('white')
-        autotext.set_size(10)
-
-    ax.set_title(title)
-    st.pyplot(fig)
-
-#####################################################################
-# ====================== FONCTION PRINCIPALE ====================== #
-#####################################################################
-
 # Fonction principale de l'application Streamlit
 def main():
     st.set_page_config(layout="wide")
@@ -226,15 +220,17 @@ def main():
         filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
 
         # Convertir certaines colonnes en entiers
-        int_columns = INT_CATEGORIES
+        int_columns = ['VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL']
         filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
 
         # Appliquer le style
         styled_df = filtered_df1.style.format({
             "YEAR": "{:.0f}",
-            "WEEK": "{:.0f}"})
+            "WEEK": "{:.0f}"
+        })
 
         # Utiliser styled_df pour l'affichage
+
         st.dataframe(styled_df, hide_index=True)
 
 
@@ -248,7 +244,8 @@ def main():
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
         # Liste des noms de mois
-        month_names = MONTHS
+        month_names = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", 
+                       "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
         # II. Interface utilisateur pour la sélection de l'année, du mois et de la semaine
         with col2:
@@ -276,7 +273,7 @@ def main():
                                     (df_data['WEEK'] <= end_week)]
 
         # Convertir certaines colonnes en entiers pour les deux tableaux
-        int_columns = INT_CATEGORIES
+        int_columns = ['VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL']
         filtered_week_df[int_columns] = filtered_week_df[int_columns].astype(int)
         filtered_month_df[int_columns] = filtered_month_df[int_columns].astype(int)
 
@@ -302,7 +299,7 @@ def main():
             df_study = filtered_week_df[filtered_week_df['STUDY'] == sel_study]
 
             # Remplacement des NaN par 0 et calcul de la somme
-            df_study_sum = df_study[INT_CATEGORIES].fillna(0).sum()
+            df_study_sum = df_study[['VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL']].fillna(0).sum()
             
             # Filtrage pour ne garder que les tâches avec une somme non nulle
             df_study_sum = df_study_sum[df_study_sum > 0]
@@ -318,7 +315,7 @@ def main():
             df_study = filtered_month_df[filtered_month_df['STUDY'] == sel_study]
 
             # Remplacement des NaN par 0 et calcul de la somme
-            df_study_sum = df_study[INT_CATEGORIES].fillna(0).sum()
+            df_study_sum = df_study[['VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL']].fillna(0).sum()
 
             # Filtrage pour ne garder que les tâches avec une somme non nulle
             df_study_sum = df_study_sum[df_study_sum > 0]
@@ -339,34 +336,29 @@ def main():
         for arc in arcs:
             df_arc = load_data(DATA_FOLDER, arc)
             if df_arc is not None:
-                df_arc['Total Time'] = df_arc[INT_CATEGORIES].sum(axis=1)
+                df_arc['Total Time'] = df_arc[['VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL']].sum(axis=1)
                 df_arc = df_arc.groupby('WEEK')['Total Time'].sum().reset_index()
                 dfs[arc] = df_arc
             else:
                 st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
 
         # Vérifier si le dictionnaire dfs n'est pas vide
-        col1, col2 = st.columns(2)
-        with col1:
-            if dfs:
-                fig, ax = plt.subplots(figsize=(12, 6))
-                for arc, df in dfs.items():
-                    sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=df, label=arc)
+        if dfs:
+            fig, ax = plt.subplots(figsize=(12, 6))
+            for arc, df in dfs.items():
+                sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=df, label=arc)
 
-                plt.title('Évolution Hebdomadaire du Temps Total Passé par Chaque ARC en 2024')
-                plt.xlabel('Semaine')
-                plt.ylabel('Temps Total (Heures)')
-                plt.xlim(1, 52)
-                plt.legend()
+            plt.title('Évolution Hebdomadaire du Temps Total Passé par Chaque ARC en 2024')
+            plt.xlabel('Semaine')
+            plt.ylabel('Temps Total (Heures)')
+            plt.xlim(1, 52)
+            plt.legend()
 
-                st.pyplot(fig)
-            else:
-                st.error("Aucune donnée disponible pour l'affichage du graphique.")
+            st.pyplot(fig)
+        else:
+            st.error("Aucune donnée disponible pour l'affichage du graphique.")
 
 
-#####################################################################
-# ====================== LANCEMENT DE L'ALGO ====================== #
-#####################################################################
 
 if __name__ == "__main__":
     main()
