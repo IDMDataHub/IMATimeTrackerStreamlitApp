@@ -40,6 +40,17 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     
     return data
 
+def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
+    # Convertir le DataFrame en CSV
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=sep, encoding=encoding)
+    
+    # Réinitialiser le curseur du buffer au début
+    csv_buffer.seek(0)
+    
+    # Utiliser s3_client pour sauvegarder le fichier CSV dans S3
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+
 def load_arc_passwords():
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
