@@ -30,8 +30,26 @@ s3_client = boto3.client(
     aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
 )
 
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
+    # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
+    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
+    body = obj['Body'].read().decode(encoding)
+    
+    # Utilisez pandas pour lire le CSV
+    data = pd.read_csv(StringIO(body), sep=sep)
+    
+    return data
 
+def load_arc_passwords():
+    try:
+        # Tentez de charger le fichier avec l'encodage UTF-8
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
+    except UnicodeDecodeError:
+        # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
+    return dict(zip(df['ARC'], df['MDP']))
 
+ARC_PASSWORDS = load_arc_passwords()
 
 # # Essayer de configurer la locale en français
 # try:
@@ -54,6 +72,7 @@ def load_data(arc):
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
 def authenticate_user(arc, password_entered):
+
     return ARC_PASSWORDS.get(arc) == password_entered.lower()
 
 def calculate_weeks():
