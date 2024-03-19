@@ -30,6 +30,16 @@ s3_client = boto3.client(
     aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
 )
 
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
+    # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
+    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
+    body = obj['Body'].read().decode(encoding)
+    
+    # Utilisez pandas pour lire le CSV
+    data = pd.read_csv(StringIO(body), sep=sep)
+    
+    return data
+    
 def load_arc_passwords():
     file_name = "ARC_MDP.csv"  # Assurez-vous que ce fichier est bien présent dans votre bucket S3
     try:
@@ -182,15 +192,6 @@ def delete_ongoing_file(arc):
         # Gestion d'erreurs potentielles lors de la suppression
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
-def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
-    # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
-    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
-    body = obj['Body'].read().decode(encoding)
-    
-    # Utilisez pandas pour lire le CSV
-    data = pd.read_csv(StringIO(body), sep=sep)
-    
-    return data
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
