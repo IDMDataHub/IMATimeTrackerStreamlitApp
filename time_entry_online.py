@@ -290,7 +290,7 @@ def main():
     else:
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
-        filtered_df2 = load_weekly_data(weekly_file_path)
+        filtered_df2 = load_weekly_data(arc, selected_week)
 
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
