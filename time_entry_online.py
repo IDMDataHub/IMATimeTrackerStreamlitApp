@@ -200,7 +200,7 @@ def load_arc_passwords():
 def main():
     ARC_PASSWORDS = load_arc_passwords()
     st.write(ARC_PASSWORDS.keys())
-    st.set_page_config(layout="wide")
+    # st.set_page_config(layout="wide")
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
