@@ -18,8 +18,8 @@ DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpemen
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE']
-INT_CATEGORIES = CATEGORIES[3:-1]
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
+INT_CATEGORIES = CATEGORIES[3:-2]
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -110,7 +110,7 @@ def check_create_weekly_file(arc, year, week):
     assigned_studies = load_assigned_studies(arc)
     rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
              'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-             'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
+             'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
     pd.DataFrame(rows).to_csv(file_path, index=False, sep=";", encoding='utf-8')
     return file_path
 
@@ -236,7 +236,7 @@ def main():
             assigned_studies = set(load_assigned_studies(arc))
             rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
                      'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-                     'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
+                     'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
 
