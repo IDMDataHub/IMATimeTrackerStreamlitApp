@@ -28,8 +28,7 @@ s3_client = boto3.client(
     aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
 )
 
-@st.cache(allow_output_mutation=True)
-
+@st.cache_data(ttl=600, show_spinner=False)
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
@@ -71,7 +70,7 @@ ARC_PASSWORDS = load_arc_passwords()
 #####################################################################
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
 #####################################################################
-
+@st.cache_data(ttl=600, show_spinner=False)
 def load_data(arc):
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     try:
