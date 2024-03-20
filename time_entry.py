@@ -201,17 +201,20 @@ def main():
                 # Il y a des données dans time_df pour l'année et la semaine en cours
                 # Fusionner les données
                 merged_df = pd.merge(filtered_df2, time_df, on=['YEAR', 'WEEK', 'STUDY'], suffixes=('_ongoing', '_time'), how='outer')
-
+                st.write('filtered_df2')
+                st.write('time_df')
+                st.write('merged_df')
                 # Récupérer les études actuellement assignées à cet ARC
                 assigned_studies = set(load_assigned_studies(arc))
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
+                st.write(merged_df)
 
                 # Remplacer les valeurs dans Ongoing avec celles de Time si elles ne sont pas 0
                 columns_to_update = CATEGORIES[3:]
                 for col in columns_to_update:
                     merged_df[col + '_ongoing'] = merged_df.apply(
                         lambda row: row[col + '_time'] if not pd.isna(row[col + '_time']) and row[col + '_ongoing'] == 0 else row[col + '_ongoing'], axis=1)
-
+                st.write(merged_df)
                 # Ajouter des lignes pour les nouvelles études assignées manquantes
                 for study in assigned_studies:
                     if study not in merged_df['STUDY'].tolist():
