@@ -209,7 +209,8 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     
     # Utilisez pandas pour lire le CSV
     data = pd.read_csv(StringIO(body), sep=sep)
-    
+    st.write('dans la fonction load_csv_from_s3')
+    st.write(data)
     return data
 
 def load_arc_passwords():
@@ -281,8 +282,6 @@ def main():
     # Récupérer la valeur sélectionnée (numéro de la semaine)
     selected_week = int(week_choice2.split()[-1].strip(')'))
     time_df = load_time_data(arc, selected_week)
-    st.write('time_df')
-    st.write(time_df)
 
     if "Semaine précédente" in week_choice2:
         # Charger les données de la semaine précédente à partir de Time_arc.csv
@@ -291,6 +290,8 @@ def main():
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
         filtered_df2 = load_weekly_data(arc, selected_week)
+        st.write('filtered_df2 | load_weekly_data')
+        st.write(filtered_df2)
 
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
@@ -300,13 +301,11 @@ def main():
                 # Récupérer les études actuellement assignées à cet ARC
                 assigned_studies = set(load_assigned_studies(arc))
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
-                st.write(merged_df)
                 # Remplacer les valeurs dans Ongoing avec celles de Time si elles ne sont pas 0
                 columns_to_update = CATEGORIES[3:]
                 for col in columns_to_update:
                     merged_df[col + '_ongoing'] = merged_df.apply(
                         lambda row: row[col + '_time'] if not pd.isna(row[col + '_time']) and row[col + '_ongoing'] == 0 else row[col + '_ongoing'], axis=1)
-                st.write(merged_df)
                 # Ajouter des lignes pour les nouvelles études assignées manquantes
                 for study in assigned_studies:
                     if study not in merged_df['STUDY'].tolist():
