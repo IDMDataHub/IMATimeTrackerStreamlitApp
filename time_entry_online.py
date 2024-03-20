@@ -263,6 +263,30 @@ def save_updated_data(df_data, selected_week, arc):
     st.success("Les données ont été sauvegardées et le fichier temporaire a été supprimé.")
     st.rerun()
 
+def merge_and_filter_data(time_df, arc, year_choice, selected_week):
+    """
+    Fusionne les données actuelles avec les données en cours de la semaine sélectionnée,
+    en évitant les duplications et en s'assurant que seules les données pertinentes sont incluses.
+    """
+    # Chargement des données "ongoing" pour l'ARC et la semaine spécifiés
+    ongoing_df = load_weekly_data(arc, selected_week)
+
+    # Fusion des DataFrames 'time_df' et 'ongoing_df' en utilisant une jointure externe pour conserver toutes les lignes
+    merged_df = pd.merge(ongoing_df, time_df, on=['YEAR', 'WEEK', 'STUDY'], how='outer', suffixes=('_ongoing', '_time'))
+
+    # Gestion des éventuelles valeurs manquantes après la fusion
+    for col in CATEGORIES[3:]:  # Parcourt toutes les colonnes d'intérêt à l'exception de YEAR, WEEK, STUDY
+        # Utilise les valeurs de 'time_df' là où 'ongoing_df' est nul ou zéro
+        merged_df[col] = merged_df.apply(lambda row: row[f'{col}_time'] if pd.notnull(row[f'{col}_time']) and row[f'{col}_ongoing'] in [0, None] else row[f'{col}_ongoing'], axis=1)
+    
+    # Suppression des colonnes suffixées par "_time" après la fusion, puisqu'elles ne sont plus nécessaires
+    merged_df = merged_df[[col for col in merged_df.columns if not col.endswith('_time')]]
+
+    # Filtrage final pour s'assurer que les données correspondent à la semaine et à l'année choisies
+    filtered_df = merged_df[(merged_df['YEAR'] == year_choice) & (merged_df['WEEK'] == selected_week)]
+
+    return filtered_df
+
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
