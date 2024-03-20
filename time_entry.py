@@ -19,7 +19,7 @@ ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
-INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
+INT_CATEGORIES = CATEGORIES[3:-2]
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -133,7 +133,7 @@ def delete_ongoing_file(arc):
 #####################################################################
 
 def main():
-    st.set_page_config(layout="wide")
+    st.set_page_config(layout="wide", page_icon=“:ice_cube:”)
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
@@ -228,6 +228,7 @@ def main():
                 # Créer le DataFrame final avec les colonnes filtrées
                 final_df = merged_df[filtered_columns]
                 filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
+    
 
             else:
                 # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
