@@ -282,7 +282,6 @@ def main():
     # Récupérer la valeur sélectionnée (numéro de la semaine)
     selected_week = int(week_choice2.split()[-1].strip(')'))
     time_df = load_time_data(arc, selected_week)
-    st.write(time_df)
 
     if "Semaine précédente" in week_choice2:
         # Charger les données de la semaine précédente à partir de Time_arc.csv
@@ -290,6 +289,7 @@ def main():
     else:
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
+        st.write(weekly_file_path)
         filtered_df2 = load_weekly_data(arc, selected_week)
 
         if not time_df.empty:
