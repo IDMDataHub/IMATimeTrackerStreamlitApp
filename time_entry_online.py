@@ -240,7 +240,6 @@ def main():
 
     # I. Chargement des données
     df_data = load_data(arc)
-
     previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Interface utilisateur pour la sélection de l'année et de la semaine
@@ -282,6 +281,8 @@ def main():
     # Récupérer la valeur sélectionnée (numéro de la semaine)
     selected_week = int(week_choice2.split()[-1].strip(')'))
     time_df = load_time_data(arc, selected_week)
+    st.write('time_df')
+    st.write(time_df)
 
     if "Semaine précédente" in week_choice2:
         # Charger les données de la semaine précédente à partir de Time_arc.csv
@@ -296,9 +297,6 @@ def main():
                 # Il y a des données dans time_df pour l'année et la semaine en cours
                 # Fusionner les données
                 merged_df = pd.merge(filtered_df2, time_df, on=['YEAR', 'WEEK', 'STUDY'], suffixes=('_ongoing', '_time'), how='outer')
-                st.write('filtered_df2')
-                st.write('time_df')
-                st.write('merged_df')
                 # Récupérer les études actuellement assignées à cet ARC
                 assigned_studies = set(load_assigned_studies(arc))
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
