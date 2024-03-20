@@ -215,7 +215,7 @@ def delete_ongoing_file(arc):
 
 def main():
     try:
-        st.set_page_config(layout="wide")
+        st.set_page_config(layout="wide", page_icon=":mag:", page_title="I-Motion Adulte - Espace ARCs"))
     except:
         pass
     st.title("I-Motion Adulte - Espace ARCs")
