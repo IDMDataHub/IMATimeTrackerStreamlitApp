@@ -28,7 +28,7 @@ s3_client = boto3.client(
     aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
 )
 
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=True, persist="disk")
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
@@ -49,6 +49,7 @@ def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
     # Utiliser s3_client pour sauvegarder le fichier CSV dans S3
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
+@st.cache_data(ttl=3600, show_spinner=True, persist="disk")
 def load_arc_passwords():
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
@@ -70,7 +71,7 @@ ARC_PASSWORDS = load_arc_passwords()
 #####################################################################
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
 #####################################################################
-@st.cache_data(ttl=600, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=True, persist="disk")
 def load_data(arc):
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     try:
@@ -105,6 +106,7 @@ def save_data(df, arc):
     # Envoi du contenu CSV au bucket S3
     s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
+@st.cache_data(ttl=3600, show_spinner=True, persist="disk")
 def load_time_data(arc, week):
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     
@@ -137,6 +139,7 @@ def load_assigned_studies(arc):
     
     return assigned_studies['STUDY'].tolist()
 
+@st.cache_data(ttl=3600, show_spinner=True, persist="disk")
 def check_create_weekly_file(arc, year, week):
     file_name = f"Ongoing_{arc}.csv"
 
@@ -169,7 +172,7 @@ def check_create_weekly_file(arc, year, week):
 
     return file_name
 
-
+@st.cache_data(ttl=3600, show_spinner=True, persist="disk")
 def load_weekly_data(arc, week):
     file_name = f"Ongoing_{arc}.csv"  # Construit le nom du fichier basé sur l'ARC
     
