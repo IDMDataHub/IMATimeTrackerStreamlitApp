@@ -268,7 +268,10 @@ def save_updated_data(df_data, selected_week, arc):
 #####################################################################
 
 def main():
-    st.set_page_config(layout="wide")
+    try:
+        st.set_page_config(layout="wide")
+    except:
+        pass
     st.title("I-Motion Adulte - Espace ARCs")
 
     arc = authenticate_user_interface()
