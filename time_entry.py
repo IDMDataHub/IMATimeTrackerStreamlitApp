@@ -148,7 +148,7 @@ def delete_ongoing_file(arc):
 #####################################################################
 
 def main():
-    st.set_page_config(layout="wide", page_icon=":ice_cube:", page_title="I-Motion Adulte - Espace ARCs")
+    st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace ARCs")
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
