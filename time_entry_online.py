@@ -37,7 +37,10 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     
     # Utilisez pandas pour lire le CSV
     data = pd.read_csv(StringIO(body), sep=sep)
-    st.write(file_name)
+    try:
+        st.write(file_name)
+    except:
+        st.write("erreur de file name")
     st.write(data)
     return data
 
