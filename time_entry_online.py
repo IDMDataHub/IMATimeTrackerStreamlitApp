@@ -296,8 +296,11 @@ def main():
                 # Il y a des données dans time_df pour l'année et la semaine en cours
                 # Fusionner les données
                 merged_df = pd.merge(filtered_df2, time_df, on=['YEAR', 'WEEK', 'STUDY'], suffixes=('_ongoing', '_time'), how='outer')
+                st.write('filtered_df2')
                 st.write(filtered_df2)
+                st.write('time_df')
                 st.write(time_df)
+                st.write('merged_df')
                 st.write(merged_df)
                 # Récupérer les études actuellement assignées à cet ARC
                 assigned_studies = set(load_assigned_studies(arc))
