@@ -39,9 +39,10 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     data = pd.read_csv(StringIO(body), sep=sep)
     try:
         st.write(file_name)
+        st.write(data)
     except:
         st.write("erreur de file name")
-    st.write(data)
+        st.write(data)
     return data
 
 def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
