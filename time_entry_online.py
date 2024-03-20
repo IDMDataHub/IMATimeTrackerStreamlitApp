@@ -57,6 +57,7 @@ def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 def load_arc_passwords():
+    st.write('load_arc_passwords')
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
@@ -79,6 +80,7 @@ ARC_PASSWORDS = load_arc_passwords()
 #####################################################################
 
 def load_data(arc):
+    st.write('load_data')
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
@@ -113,6 +115,7 @@ def save_data(df, arc):
     s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
 def load_time_data(arc, week):
+    st.write('load_time_data')
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     
     # Tentative de chargement du fichier depuis S3
@@ -134,6 +137,7 @@ def get_start_end_dates(year, week_number):
     return week_start_date, week_end_date
 
 def load_assigned_studies(arc):
+    st.write('load_assigned_studies')
     file_name = "STUDY.csv"  # Nom du fichier dans le bucket S3
     
     # Chargement du fichier depuis S3
@@ -145,6 +149,7 @@ def load_assigned_studies(arc):
     return assigned_studies['STUDY'].tolist()
 
 def check_create_weekly_file(arc, year, week):
+    st.write('check_create_weekly_file')
     file_name = f"Ongoing_{arc}.csv"
 
     # Tentative de chargement du fichier existant depuis S3
@@ -180,13 +185,13 @@ def check_create_weekly_file(arc, year, week):
     return file_name
 
 def load_weekly_data(arc, week):
+    st.write('load_weekly_data')
     file_name = f"Ongoing_{arc}.csv"  # Construit le nom du fichier basé sur l'ARC
     
     # Tentative de chargement du fichier depuis S3
     try:
         df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
         # Filtrer les données pour la semaine spécifiée et retourner le DataFrame
-        st.write('ici ?')
         return df[df['WEEK'] == week]
     except Exception as e:
         # En cas d'erreur, par exemple si le fichier n'existe pas, retourner un DataFrame vide
