@@ -202,26 +202,6 @@ def delete_ongoing_file(arc):
         # Gestion d'erreurs potentielles lors de la suppression
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
-def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
-    # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
-    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
-    body = obj['Body'].read().decode(encoding)
-    
-    # Utilisez pandas pour lire le CSV
-    data = pd.read_csv(StringIO(body), sep=sep)
-    st.write('dans la fonction load_csv_from_s3')
-    st.write(data)
-    return data
-
-def load_arc_passwords():
-    try:
-        # Tentez de charger le fichier avec l'encodage UTF-8
-        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
-    except UnicodeDecodeError:
-        # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
-        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
-    return dict(zip(df['ARC'], df['MDP']))
-
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
