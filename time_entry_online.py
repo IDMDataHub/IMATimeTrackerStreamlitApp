@@ -194,24 +194,6 @@ def delete_ongoing_file(arc):
         # Gestion d'erreurs potentielles lors de la suppression
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
-def update_session_data(original_data, new_data, year, week):
-    # Fonction pour mettre à jour les données en session_state après édition ou fusion
-    original_data.drop(original_data[(original_data['YEAR'] == year) & (original_data['WEEK'] == week)].index, inplace=True)
-    updated_data = pd.concat([original_data, new_data]).reset_index(drop=True)
-    return updated_data
-
-def save_changes_to_data(data, arc):
-    # Fonction pour persister les modifications dans S3 ou autre storage
-    save_data(data, arc)
-
-def merge_data_for_current_week(time_df, ongoing_df, arc, year, week):
-    # Fonction pour fusionner les données de la semaine en cours avec les données existantes
-    # Cette fonction doit inclure le traitement que vous avez mentionné pour la fusion et la mise à jour des données
-    merged_df = pd.merge(ongoing_df, time_df, how='outer', on=['YEAR', 'WEEK', 'STUDY'], suffixes=('', '_new'))
-    # Appliquer la logique de fusion comme décrit dans votre exemple
-    # ...
-    return merged_df, ongoing_df  # Retourner le DataFrame fusionné et le DataFrame pour l'édition
-
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
@@ -232,10 +214,7 @@ def main():
         return
 
     # I. Chargement des données
-    if 'data_loaded' not in st.session_state or not st.session_state['data_loaded']:
-        st.session_state['data_to_edit'] = load_data(arc)  # Charger les données initiales
-        st.session_state['data_loaded'] = True  # Marquer les données comme chargées
-    
+    df_data = load_data(arc)
     previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Interface utilisateur pour la sélection de l'année et de la semaine
@@ -247,7 +226,7 @@ def main():
         week_choice = st.slider("Semaine", 1, 52, current_week)
 
     # Filtrage et manipulation des données
-    filtered_df = st.session_state['data_to_edit'][(st.session_state['data_to_edit']['YEAR'] == year_choice) & (st.session_state['data_to_edit']['WEEK'] == week_choice)]
+    filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
 
     # Convertir certaines colonnes en entiers
     int_columns = INT_CATEGORIES
