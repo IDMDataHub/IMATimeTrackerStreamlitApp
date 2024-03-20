@@ -152,37 +152,35 @@ def check_create_weekly_file(arc, year, week):
     st.write('check_create_weekly_file')
     file_name = f"Ongoing_{arc}.csv"
 
-    # Tentative de chargement du fichier existant depuis S3
     try:
         df_existing = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except Exception as e:
         # Si le fichier n'existe pas ou une autre erreur se produit, créer un nouveau DataFrame
         df_existing = pd.DataFrame(columns=CATEGORIES)
     
-    # Vérification si les données de l'année et de la semaine spécifiées existent déjà
-    if not ((df_existing['YEAR'] == year) & (df_existing['WEEK'] == week)).any():
-        # S'il n'existe pas de données pour cette semaine, réinitialiser le DataFrame
-        df_existing = pd.DataFrame(columns=CATEGORIES)
-
     # Chargement des études assignées
     assigned_studies = load_assigned_studies(arc)
     if assigned_studies:
-        # Préparation des nouvelles lignes à ajouter
+        # Filtrer pour ne garder que les études non présentes pour cette semaine et année
+        existing_studies = df_existing[(df_existing['YEAR'] == year) & (df_existing['WEEK'] == week)]['STUDY']
+        new_studies = [study for study in assigned_studies if study not in existing_studies.tolist()]
+        
+        # Préparation des nouvelles lignes à ajouter uniquement pour les nouvelles études
         rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0,
                  'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0,
-                 'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
-        
-        # Ajout des nouvelles lignes au DataFrame existant (si applicable)
-        df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
+                 'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in new_studies]
 
-        # Sauvegarde du DataFrame mis à jour sur S3
-        save_csv_to_s3(df_existing, BUCKET_NAME, file_name, sep=';', encoding='utf-8')
+        if rows:  # S'il y a de nouvelles études à ajouter
+            df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
+
+            # Sauvegarde du DataFrame mis à jour sur S3
+            save_csv_to_s3(df_existing, BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     else:
         st.error("Aucune étude n'a été affectée. Merci de voir avec vos managers.")
         return None
-    
-    # Renvoyer le nom du fichier pour des opérations ultérieures si nécessaire
+
     return file_name
+
 
 def load_weekly_data(arc, week):
     st.write('load_weekly_data')
