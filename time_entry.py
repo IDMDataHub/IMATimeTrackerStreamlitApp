@@ -19,7 +19,7 @@ ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
-INT_CATEGORIES = CATEGORIES[3:-2]
+INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -119,9 +119,7 @@ def load_weekly_data(file_path):
     if file_path is None:
         # Retourner un DataFrame vide ou gérer comme nécessaire
         return pd.DataFrame()
-    else:
-        st.write('dans la fonction')
-        st.write(pd.read_csv(file_path, sep=";", encoding='utf-8'))
+
     return pd.read_csv(file_path, sep=";", encoding='utf-8')
 
 
@@ -199,8 +197,6 @@ def main():
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
         filtered_df2 = load_weekly_data(weekly_file_path)
-        st.write('filtered_df2 | load_weekly_data')
-        st.write(filtered_df2)
 
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
@@ -231,11 +227,7 @@ def main():
 
                 # Créer le DataFrame final avec les colonnes filtrées
                 final_df = merged_df[filtered_columns]
-                st.write('final_df')
-                st.write(final_df)
                 filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
-                st.write('filtered_df2')
-                st.write(filtered_df2)
 
             else:
                 # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
