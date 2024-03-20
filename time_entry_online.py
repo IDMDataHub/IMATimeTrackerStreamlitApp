@@ -227,7 +227,6 @@ def load_arc_passwords():
 #####################################################################
 
 def main():
-    ARC_PASSWORDS = load_arc_passwords()
     st.set_page_config(layout="wide")
     st.title("I-Motion Adulte - Espace ARCs")
 
@@ -241,6 +240,7 @@ def main():
 
     # I. Chargement des données
     df_data = load_data(arc)
+    st.dataframe(df_data)
     previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Interface utilisateur pour la sélection de l'année et de la semaine
