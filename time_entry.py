@@ -223,14 +223,19 @@ def main():
                         new_row_data['COMMENTAIRE_ongoing'] = "Aucun"
                         new_row = pd.DataFrame([new_row_data])
                         merged_df = pd.concat([merged_df, new_row], ignore_index=True)
-
+                st.write(merged_df)
 
                 # Filtrer les colonnes pour éliminer celles avec '_time'
                 filtered_columns = [col for col in merged_df.columns if '_time' not in col]
 
                 # Créer le DataFrame final avec les colonnes filtrées
                 final_df = merged_df[filtered_columns]
+                st.write('final_df')
+                st.write(final_df)
                 filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
+                st.write('filtered_df2')
+                st.write(filtered_df2)
+
             else:
                 # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
                 filtered_df2 = time_df

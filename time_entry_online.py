@@ -324,7 +324,12 @@ def main():
 
                 # Créer le DataFrame final avec les colonnes filtrées
                 final_df = merged_df[filtered_columns]
+                st.write('final_df')
+                st.write(final_df)
                 filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
+                st.write('filtered_df2')
+                st.write(filtered_df2)
+
             else:
                 # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
                 filtered_df2 = time_df
