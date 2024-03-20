@@ -205,32 +205,12 @@ def save_changes_to_data(data, arc):
     save_data(data, arc)
 
 def merge_data_for_current_week(time_df, ongoing_df, arc, year, week):
-    # Fusionne les dataframes sur les colonnes 'YEAR', 'WEEK' et 'STUDY' tout en gardant toutes les entrées.
-    merged_df = pd.merge(ongoing_df, time_df, on=['YEAR', 'WEEK', 'STUDY'], how='outer', suffixes=('', '_new'))
-    
-    # Mettre à jour les valeurs en utilisant les valeurs de 'time_df' si elles existent.
-    for column in CATEGORIES[3:]:
-        merged_df[column] = merged_df.apply(
-            lambda row: row[column + '_new'] if not pd.isna(row[column + '_new']) else row[column], axis=1
-        )
-    
-    # Supprimer les colonnes temporairement ajoutées '_new'
-    merged_df.drop(columns=[col + '_new' for col in CATEGORIES[3:]], inplace=True)
-
-    # S'assurer que les données des nouvelles études sont incluses
-    # En supposant que load_assigned_studies(arc) renvoie toutes les études assignées à cet ARC
-    assigned_studies = set(load_assigned_studies(arc))
-    for study in assigned_studies:
-        if study not in merged_df['STUDY'].tolist():
-            new_row = {'YEAR': year, 'WEEK': week, 'STUDY': study}
-            new_row.update({col: 0 for col in CATEGORIES[3:]})
-            new_row['COMMENTAIRE'] = "Aucun"
-            merged_df = merged_df.append(new_row, ignore_index=True)
-    
-    # Retourner uniquement les données pour la semaine et l'année en cours
-    merged_df = merged_df[(merged_df['YEAR'] == year) & (merged_df['WEEK'] == week)]
-    
-    return merged_df
+    # Fonction pour fusionner les données de la semaine en cours avec les données existantes
+    # Cette fonction doit inclure le traitement que vous avez mentionné pour la fusion et la mise à jour des données
+    merged_df = pd.merge(ongoing_df, time_df, how='outer', on=['YEAR', 'WEEK', 'STUDY'], suffixes=('', '_new'))
+    # Appliquer la logique de fusion comme décrit dans votre exemple
+    # ...
+    return merged_df, ongoing_df  # Retourner le DataFrame fusionné et le DataFrame pour l'édition
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
@@ -245,78 +225,140 @@ def main():
 
     # Authentification de l'utilisateur
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
-    arc_password_entered = st.sidebar.text_input("Entrez le mot de passe pour {}".format(arc), type="password")
+    arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
     
     if not authenticate_user(arc, arc_password_entered):
         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
 
-    # Chargement initial des données
+    # I. Chargement des données
+    if 'data_loaded' not in st.session_state or not st.session_state['data_loaded']:
+        st.session_state['data_to_edit'] = load_data(arc)  # Charger les données initiales
+        st.session_state['data_loaded'] = True  # Marquer les données comme chargées
+    
     previous_week, current_week, next_week, current_year = calculate_weeks()
 
-    # Interface utilisateur pour la sélection de l'année et de la semaine
+    # II. Interface utilisateur pour la sélection de l'année et de la semaine
+    st.subheader("Visualisation")
     col1, col2 = st.columns([1, 3])
     with col1:
-        year_choice = st.selectbox("Année", ANNEES, index=ANNEES.index(current_year))
+        year_choice = st.selectbox("Année", ANNEES, index=ANNEES.index(datetime.datetime.now().year))
     with col2:
         week_choice = st.slider("Semaine", 1, 52, current_week)
 
-    # Gérer le chargement et la mise en cache des données avec st.session_state
-    if 'data_loaded' not in st.session_state:
-        st.session_state['data_loaded'] = False
+    # Filtrage et manipulation des données
+    filtered_df = st.session_state['data_to_edit'][(st.session_state['data_to_edit']['YEAR'] == year_choice) & (st.session_state['data_to_edit']['WEEK'] == week_choice)]
 
-    if not st.session_state['data_loaded'] or 'data_to_edit' not in st.session_state:
-        df_data = load_data(arc)
-        st.session_state['data_to_edit'] = df_data
-        st.session_state['data_loaded'] = True
-    else:
-        df_data = st.session_state['data_to_edit']
-
-    # Filtrage des données pour la visualisation
-    filtered_df = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
+    # Convertir certaines colonnes en entiers
     int_columns = INT_CATEGORIES
-    filtered_df[int_columns] = filtered_df[int_columns].astype(int)
-    styled_df = filtered_df.style.format({"YEAR": "{:.0f}", "WEEK": "{:.0f}"})
-    st.dataframe(styled_df, height=600)
+    filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
 
-    # Section pour la modification et la fusion des données
-    if 'edit_mode' not in st.session_state:
-        st.session_state['edit_mode'] = False
+    # Appliquer le style
+    styled_df = filtered_df1.style.format({
+        "YEAR": "{:.0f}",
+        "WEEK": "{:.0f}"
+    })
 
-    edit_mode_button = st.button("Modifier les Données")
-    if edit_mode_button:
-        st.session_state['edit_mode'] = not st.session_state['edit_mode']
+    # Utiliser styled_df pour l'affichage
 
-    if st.session_state['edit_mode']:
-        week_choice2 = st.radio(
-            "Choisissez une semaine",
-            [f"Semaine précédente (Semaine {previous_week})", f"Semaine en cours (Semaine {current_week})"],
-            index=1
-        )
 
-        selected_week = int(week_choice2.split()[-1].strip(')'))
-        time_df = load_time_data(arc, selected_week)
+    st.dataframe(styled_df, hide_index=True)
 
-        # Traitement spécifique pour la semaine en cours
-        if "Semaine en cours" in week_choice2:
-            weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
-            filtered_df2 = load_weekly_data(arc, selected_week)
-            if not time_df.empty:
-                # Fusionner les données pour la semaine en cours avec les données existantes
-                merged_df, filtered_df2 = merge_data_for_current_week(time_df, filtered_df2, arc, current_year, current_week)
-                
-                # Sauvegarde des modifications dans session_state
-                st.session_state['data_to_edit'] = update_session_data(st.session_state['data_to_edit'], merged_df, current_year, current_week)
+    # III. Section pour la modification des données
+    st.write("---")
+    st.subheader("Entrée d'heures")
+    
+    week_choice2 = st.radio(
+        "Choisissez une semaine",
+        [f"Semaine précédente (Semaine {previous_week})",
+         f"Semaine en cours (Semaine {current_week})"],
+        index=1)
 
-        # Affichage du st.data_editor pour la modification
-        edited_data = st.data_editor(data=filtered_df2, key="data_editor")
+    # Récupérer la valeur sélectionnée (numéro de la semaine)
+    selected_week = int(week_choice2.split()[-1].strip(')'))
+    time_df = load_time_data(arc, selected_week)
 
-        if st.button('Sauvegarder les Modifications'):
-            # Mettre à jour les données en session_state et persister les modifications
-            save_changes_to_data(st.session_state['data_to_edit'], arc)
-            st.success("Les modifications ont été sauvegardées avec succès.")
-            st.session_state['edit_mode'] = False
-            st.rerun()
+    if "Semaine précédente" in week_choice2:
+        # Charger les données de la semaine précédente à partir de Time_arc.csv
+        filtered_df2 = time_df
+    else:
+        # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
+        weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
+        filtered_df2 = load_weekly_data(arc, selected_week)
+
+        if not time_df.empty:
+            if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
+                # Il y a des données dans time_df pour l'année et la semaine en cours
+                # Fusionner les données
+                merged_df = pd.merge(filtered_df2, time_df, on=['YEAR', 'WEEK', 'STUDY'], suffixes=('_ongoing', '_time'), how='outer')
+                # Récupérer les études actuellement assignées à cet ARC
+                assigned_studies = set(load_assigned_studies(arc))
+                merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
+                # Remplacer les valeurs dans Ongoing avec celles de Time si elles ne sont pas 0
+                columns_to_update = CATEGORIES[3:]
+                for col in columns_to_update:
+                    merged_df[col + '_ongoing'] = merged_df.apply(
+                        lambda row: row[col + '_time'] if not pd.isna(row[col + '_time']) and row[col + '_ongoing'] == 0 else row[col + '_ongoing'], axis=1)
+                # Ajouter des lignes pour les nouvelles études assignées manquantes
+                for study in assigned_studies:
+                    if study not in merged_df['STUDY'].tolist():
+                        new_row_data = {'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}
+                        new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:-1]})
+                        new_row_data['COMMENTAIRE_ongoing'] = "Aucun"
+                        new_row = pd.DataFrame([new_row_data])
+                        merged_df = pd.concat([merged_df, new_row], ignore_index=True)
+
+
+                # Filtrer les colonnes pour éliminer celles avec '_time'
+                filtered_columns = [col for col in merged_df.columns if '_time' not in col]
+
+                # Créer le DataFrame final avec les colonnes filtrées
+                final_df = merged_df[filtered_columns]
+                filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
+
+            else:
+                # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
+                filtered_df2 = time_df
+        else:
+            # time_df est complètement vide
+            assigned_studies = set(load_assigned_studies(arc))
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+                     'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
+                     'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+            filtered_df2 = pd.DataFrame(rows)
+
+
+    # IV. Afficher le DataFrame dans l'éditeur de données
+    if not filtered_df2.empty:
+        filtered_df2['YEAR'] = filtered_df2['YEAR'].apply(lambda x: f"{x:.0f}")
+        filtered_df2['WEEK'] = filtered_df2['WEEK'].apply(lambda x: f"{x:.0f}")
+        df = st.data_editor(
+            data=filtered_df2,
+            hide_index=True,
+            disabled=["YEAR", "WEEK", "STUDY"])
+
+    else:
+        st.write("Aucune donnée disponible pour la semaine sélectionnée.")
+    
+    # V. Bouton de sauvegarde
+    if st.button("Sauvegarder"):
+
+        # Retirer les anciennes données de la semaine sélectionnée
+        df_data = df_data[df_data['WEEK'] != int(selected_week)]
+
+        # Concaténer avec les nouvelles données
+        updated_df = pd.concat([df_data, df]).sort_index()
+
+        # Sauvegarder le DataFrame mis à jour
+        save_data(updated_df, arc)
+
+        # Supprimer le fichier Ongoing_ARC.csv
+        delete_ongoing_file(arc)
+
+        st.success("Les données ont été sauvegardées et le fichier temporaire a été supprimé.")
+
+        # Recharger la page
+        st.rerun()
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
