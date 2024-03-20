@@ -240,7 +240,7 @@ def main():
 
     # I. Chargement des données
     df_data = load_data(arc)
-    st.dataframe(df_data)
+
     previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Interface utilisateur pour la sélection de l'année et de la semaine
@@ -253,7 +253,7 @@ def main():
 
     # Filtrage et manipulation des données
     filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
-
+    st.dataframe(filtered_df1)
     # Convertir certaines colonnes en entiers
     int_columns = INT_CATEGORIES
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
