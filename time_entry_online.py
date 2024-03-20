@@ -212,14 +212,14 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
 
     return data
 
-# def load_arc_passwords():
-#     try:
-#         # Tentez de charger le fichier avec l'encodage UTF-8
-#         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
-#     except UnicodeDecodeError:
-#         # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
-#         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
-#     return dict(zip(df['ARC'], df['MDP']))
+def load_arc_passwords():
+    try:
+        # Tentez de charger le fichier avec l'encodage UTF-8
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
+    except UnicodeDecodeError:
+        # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
+    return dict(zip(df['ARC'], df['MDP']))
 
 
 #####################################################################
