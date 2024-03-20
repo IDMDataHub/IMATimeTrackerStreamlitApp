@@ -253,11 +253,11 @@ def main():
 
     # Filtrage et manipulation des données
     filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
-    st.dataframe(filtered_df1)
+
     # Convertir certaines colonnes en entiers
     int_columns = INT_CATEGORIES
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
-
+    st.dataframe(filtered_df1)
 
     # Appliquer le style
     styled_df = filtered_df1.style.format({
