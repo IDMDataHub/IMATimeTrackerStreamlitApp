@@ -21,6 +21,21 @@ ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
+COLUMN_CONFIG = {
+    'YEAR': {"label": 'Année'},
+    'WEEK': {"label": 'Semaine'},
+    'STUDY': {"label": 'Étude'},
+    'VISITES PATIENT': {"label": 'Visites'},
+    'QUERIES': {"label": 'Queries'},
+    'SAISIE CRF': {"label": 'Saisie CRF'},
+    'REUNIONS': {"label": 'Réunions'},
+    'REMOTE': {"label": 'Remote'},
+    'MONITORING': {"label": 'Monitoring'},
+    'TRAINING': {"label": 'Formation'},
+    'ARCHIVAGE EMAIL': {"label": 'Archiv. Email'},
+    'COMMENTAIRE': {"label": 'Commentaire'},
+    'NB_VISITE': {"label": 'Nb Visites'}
+}
 
 s3_client = boto3.client(
     's3',
@@ -241,7 +256,7 @@ def main():
     # Utiliser styled_df pour l'affichage
 
 
-    st.dataframe(styled_df, hide_index=True)
+    st.dataframe(styled_df, hide_index=True, column_config=COLUMN_CONFIG)
 
     # III. Section pour la modification des données
     st.write("---")
@@ -314,7 +329,8 @@ def main():
         df = st.data_editor(
             data=filtered_df2,
             hide_index=True,
-            disabled=["YEAR", "WEEK", "STUDY"])
+            disabled=["YEAR", "WEEK", "STUDY"],
+            column_config=COLUMN_CONFIG)
 
     else:
         st.write("Aucune donnée disponible pour la semaine sélectionnée.")

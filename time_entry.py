@@ -19,7 +19,23 @@ ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
-INT_CATEGORIES = CATEGORIES[3:-2]
+INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
+COLUMN_CONFIG = {
+    'YEAR': {"label": 'Année'},
+    'WEEK': {"label": 'Semaine'},
+    'STUDY': {"label": 'Étude'},
+    'VISITES PATIENT': {"label": 'Visites'},
+    'QUERIES': {"label": 'Queries'},
+    'SAISIE CRF': {"label": 'Saisie CRF'},
+    'REUNIONS': {"label": 'Réunions'},
+    'REMOTE': {"label": 'Remote'},
+    'MONITORING': {"label": 'Monitoring'},
+    'TRAINING': {"label": 'Formation'},
+    'ARCHIVAGE EMAIL': {"label": 'Archiv. Email'},
+    'COMMENTAIRE': {"label": 'Commentaire'},
+    'NB_VISITE': {"label": 'Nb Visites'}
+}
+
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -127,14 +143,12 @@ def delete_ongoing_file(arc):
     if os.path.exists(ongoing_file_path):
         os.remove(ongoing_file_path)
 
-def on_data_edit():
-    st.session_state['data_changed'] = True
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
 
 def main():
-    st.set_page_config(layout="wide", page_icon=“:ice_cube:”)
+    st.set_page_config(layout="wide", page_icon=":ice_cube:")
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
@@ -172,9 +186,7 @@ def main():
     })
 
     # Utiliser styled_df pour l'affichage
-
-
-    st.dataframe(styled_df, hide_index=True)
+    st.dataframe(styled_df, hide_index=True, column_config=COLUMN_CONFIG)
 
     # III. Section pour la modification des données
     st.write("---")
@@ -244,44 +256,39 @@ def main():
 
 
     # IV. Afficher le DataFrame dans l'éditeur de données
-    # Initialiser un état pour suivre si les données ont été modifiées
-    if 'data_changed' not in st.session_state:
-        st.session_state['data_changed'] = False
-
     if not filtered_df2.empty:
-        filtered_df2['YEAR'] = filtered_df2['YEAR'].astype(str)
-        filtered_df2['WEEK'] = filtered_df2['WEEK'].astype(str)
+        filtered_df2['YEAR'] = filtered_df2['YEAR'].apply(lambda x: f"{x:.0f}")
+        filtered_df2['WEEK'] = filtered_df2['WEEK'].apply(lambda x: f"{x:.0f}")
         df = st.data_editor(
             data=filtered_df2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            on_change=on_data_edit  # Appeler on_data_edit lorsqu'une modification est faite
+            column_config=COLUMN_CONFIG
         )
+
     else:
         st.write("Aucune donnée disponible pour la semaine sélectionnée.")
-
     
     # V. Bouton de sauvegarde
-if st.button("Sauvegarder"):
-        # Vérifier si des modifications ont été apportées avant de sauvegarder
-        if st.session_state['data_changed']:
-            # Effectuer la sauvegarde ici en utilisant `df`
-            # Retirer les anciennes données de la semaine sélectionnée et concaténer avec les nouvelles
-            df_data = df_data[df_data['WEEK'] != int(selected_week)]
-            updated_df = pd.concat([df_data, df]).sort_index()
+    if st.button("Sauvegarder"):
 
-            # Sauvegarder le DataFrame mis à jour
-            save_data(updated_df, arc)
+        # Retirer les anciennes données de la semaine sélectionnée
+        df_data = df_data[df_data['WEEK'] != int(selected_week)]
 
-            # Supprimer le fichier Ongoing_ARC.csv et indiquer le succès de la sauvegarde
-            delete_ongoing_file(arc)
-            st.success("Les données ont été sauvegardées et le fichier temporaire a été supprimé.")
+        # Concaténer avec les nouvelles données
+        updated_df = pd.concat([df_data, df]).sort_index()
 
-            # Recharger la page ou effectuer d'autres actions nécessaires
-            st.session_state['data_changed'] = False  # Réinitialiser l'indicateur de modification des données
-            # st.rerun() si nécessaire
-        else:
-            st.info("Aucune modification détectée.")
+        # Sauvegarder le DataFrame mis à jour
+        save_data(DATA_FOLDER, updated_df, arc)
+
+        # Supprimer le fichier Ongoing_ARC.csv
+        delete_ongoing_file(arc)
+
+        st.success("Les données ont été sauvegardées et le fichier temporaire a été supprimé.")
+
+        # Recharger la page
+        st.rerun()
+
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
 #####################################################################
