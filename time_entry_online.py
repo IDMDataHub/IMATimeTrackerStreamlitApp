@@ -51,7 +51,6 @@ def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 def load_arc_passwords():
-    st.write('load_arc_passwords')
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
@@ -204,7 +203,7 @@ def delete_ongoing_file(arc):
 #####################################################################
 
 def main():
-    st.set_page_config(layout="wide")
+    # st.set_page_config(layout="wide")
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
