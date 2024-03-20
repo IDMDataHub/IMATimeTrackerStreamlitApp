@@ -289,16 +289,16 @@ def main():
     else:
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
-        st.write(weekly_file_path)
         filtered_df2 = load_weekly_data(arc, selected_week)
-        st.write(filtered_df2)
-        
+
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
                 # Il y a des données dans time_df pour l'année et la semaine en cours
                 # Fusionner les données
                 merged_df = pd.merge(filtered_df2, time_df, on=['YEAR', 'WEEK', 'STUDY'], suffixes=('_ongoing', '_time'), how='outer')
-
+                st.write(filtered_df2)
+                st.write(time_df)
+                st.write(merged_df)
                 # Récupérer les études actuellement assignées à cet ARC
                 assigned_studies = set(load_assigned_studies(arc))
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
