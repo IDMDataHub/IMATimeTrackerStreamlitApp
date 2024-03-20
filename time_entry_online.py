@@ -291,7 +291,8 @@ def main():
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
         st.write(weekly_file_path)
         filtered_df2 = load_weekly_data(arc, selected_week)
-
+        st.write(filtered_df2)
+        
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
                 # Il y a des données dans time_df pour l'année et la semaine en cours
