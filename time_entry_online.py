@@ -186,6 +186,7 @@ def load_weekly_data(arc, week):
     try:
         df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
         # Filtrer les données pour la semaine spécifiée et retourner le DataFrame
+        st.write('ici ?')
         return df[df['WEEK'] == week]
     except Exception as e:
         # En cas d'erreur, par exemple si le fichier n'existe pas, retourner un DataFrame vide
@@ -294,8 +295,6 @@ def main():
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
         filtered_df2 = load_weekly_data(arc, selected_week)
-        st.write('filtered_df2 | load_weekly_data')
-        st.write(filtered_df2)
 
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
