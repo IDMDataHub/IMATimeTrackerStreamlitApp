@@ -37,7 +37,8 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     
     # Utilisez pandas pour lire le CSV
     data = pd.read_csv(StringIO(body), sep=sep)
-    
+    st.write(file_name)
+    st.write(data)
     return data
 
 def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
@@ -83,7 +84,6 @@ def load_data(arc):
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
 def authenticate_user(arc, password_entered):
-
     return ARC_PASSWORDS.get(arc) == password_entered.lower()
 
 def calculate_weeks():
