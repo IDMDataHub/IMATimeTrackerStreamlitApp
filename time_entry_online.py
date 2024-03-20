@@ -257,7 +257,6 @@ def main():
     # Convertir certaines colonnes en entiers
     int_columns = INT_CATEGORIES
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
-    st.dataframe(filtered_df1)
 
     # Appliquer le style
     styled_df = filtered_df1.style.format({
@@ -283,6 +282,7 @@ def main():
     # Récupérer la valeur sélectionnée (numéro de la semaine)
     selected_week = int(week_choice2.split()[-1].strip(')'))
     time_df = load_time_data(arc, selected_week)
+    st.write(time_df)
 
     if "Semaine précédente" in week_choice2:
         # Charger les données de la semaine précédente à partir de Time_arc.csv
