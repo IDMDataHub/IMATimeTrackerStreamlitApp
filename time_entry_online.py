@@ -37,12 +37,6 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     
     # Utilisez pandas pour lire le CSV
     data = pd.read_csv(StringIO(body), sep=sep)
-    try:
-        st.write(file_name)
-        st.write(data)
-    except:
-        st.write("erreur de file name")
-        st.write(data)
     return data
 
 def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
@@ -80,7 +74,6 @@ ARC_PASSWORDS = load_arc_passwords()
 #####################################################################
 
 def load_data(arc):
-    st.write('load_data')
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
@@ -115,7 +108,6 @@ def save_data(df, arc):
     s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
 def load_time_data(arc, week):
-    st.write('load_time_data')
     file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     
     # Tentative de chargement du fichier depuis S3
@@ -137,7 +129,6 @@ def get_start_end_dates(year, week_number):
     return week_start_date, week_end_date
 
 def load_assigned_studies(arc):
-    st.write('load_assigned_studies')
     file_name = "STUDY.csv"  # Nom du fichier dans le bucket S3
     
     # Chargement du fichier depuis S3
@@ -149,7 +140,6 @@ def load_assigned_studies(arc):
     return assigned_studies['STUDY'].tolist()
 
 def check_create_weekly_file(arc, year, week):
-    st.write('check_create_weekly_file')
     file_name = f"Ongoing_{arc}.csv"
 
     try:
@@ -183,7 +173,6 @@ def check_create_weekly_file(arc, year, week):
 
 
 def load_weekly_data(arc, week):
-    st.write('load_weekly_data')
     file_name = f"Ongoing_{arc}.csv"  # Construit le nom du fichier basé sur l'ARC
     
     # Tentative de chargement du fichier depuis S3
@@ -210,33 +199,12 @@ def delete_ongoing_file(arc):
         # Gestion d'erreurs potentielles lors de la suppression
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
-# def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
-#     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
-#     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
-#     body = obj['Body'].read().decode(encoding)
-    
-#     # Utilisez pandas pour lire le CSV
-#     data = pd.read_csv(StringIO(body), sep=sep)
-#     st.write('dans la fonction load_csv_from_s3')
-#     st.write(pd.read_csv(file_path, sep=";", encoding='utf-8'))
-#     return data
-
-# def load_arc_passwords():
-#     try:
-#         # Tentez de charger le fichier avec l'encodage UTF-8
-#         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
-#     except UnicodeDecodeError:
-#         # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
-#         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
-#     return dict(zip(df['ARC'], df['MDP']))
-
-
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
 
 def main():
-    # st.set_page_config(layout="wide")
+    st.set_page_config(layout="wide")
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
@@ -327,11 +295,7 @@ def main():
 
                 # Créer le DataFrame final avec les colonnes filtrées
                 final_df = merged_df[filtered_columns]
-                st.write('final_df')
-                st.write(final_df)
                 filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
-                st.write('filtered_df2')
-                st.write(filtered_df2)
 
             else:
                 # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
