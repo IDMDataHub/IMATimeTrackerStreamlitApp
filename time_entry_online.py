@@ -232,7 +232,7 @@ def delete_ongoing_file(arc):
 #####################################################################
 
 def main():
-    st.set_page_config(layout="wide")
+    # st.set_page_config(layout="wide")
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
