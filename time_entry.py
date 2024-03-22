@@ -56,9 +56,9 @@ except locale.Error:
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
 #####################################################################
 
-def load_data(DATA_FOLDER, arc):
+def load_data(data_folder, arc):
     # Chemin vers le fichier Excel en fonction de l'ARC sélectionné
-    csv_file_path = os.path.join(DATA_FOLDER, f"Time_{arc}.csv")
+    csv_file_path = os.path.join(data_folder, f"Time_{arc}.csv")
     try:
         return pd.read_csv(csv_file_path, encoding='utf-8', sep=";")
     except UnicodeDecodeError:
@@ -71,9 +71,10 @@ def calculate_weeks():
     current_date = datetime.datetime.now()
     current_week = current_date.isocalendar()[1]
     previous_week = current_week - 1 if current_week > 1 else 52
+    two_weeks_ago = previous_week - 1 if previous_week > 1 else 52
     next_week = current_week + 1 if current_week < 52 else 1
-    current_year = datetime.datetime.now().year
-    return previous_week, current_week, next_week, current_year
+    current_year = current_date.year
+    return two_weeks_ago, previous_week, current_week, next_week, current_year
 
 def save_data(DATA_FOLDER, df, arc):
     csv_file_path = os.path.join(DATA_FOLDER, f"Time_{arc}.csv")
@@ -143,6 +144,7 @@ def delete_ongoing_file(arc):
     if os.path.exists(ongoing_file_path):
         os.remove(ongoing_file_path)
 
+
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
@@ -152,7 +154,8 @@ def main():
     st.title("I-Motion Adulte - Espace ARCs")
 
     # Authentification de l'utilisateur
-    arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
+    arc_options = [key for key in ARC_PASSWORDS.keys() if key == key]  # Les NaN ne sont pas égaux à eux-mêmes
+    arc = st.sidebar.selectbox("Choisissez votre ARC", sorted(arc_options))
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
     
     if not authenticate_user(arc, arc_password_entered):
@@ -161,7 +164,7 @@ def main():
 
     # I. Chargement des données
     df_data = load_data(DATA_FOLDER, arc)
-    previous_week, current_week, next_week, current_year = calculate_weeks()
+    two_weeks_ago, previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Interface utilisateur pour la sélection de l'année et de la semaine
     st.subheader("Visualisation")
@@ -194,9 +197,10 @@ def main():
     
     week_choice2 = st.radio(
         "Choisissez une semaine",
-        [f"Semaine précédente (Semaine {previous_week})",
+        [f"Deux semaines avant (Semaine {two_weeks_ago})", 
+         f"Semaine précédente (Semaine {previous_week})",
          f"Semaine en cours (Semaine {current_week})"],
-        index=1)
+        index=2)
 
     # Récupérer la valeur sélectionnée (numéro de la semaine)
     selected_week = int(week_choice2.split()[-1].strip(')'))
@@ -232,6 +236,7 @@ def main():
                         new_row_data = {'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}
                         new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:-1]})
                         new_row_data['COMMENTAIRE_ongoing'] = "Aucun"
+                        new_row_data['NB_VISITE'] = 0
                         new_row = pd.DataFrame([new_row_data])
                         merged_df = pd.concat([merged_df, new_row], ignore_index=True)
 

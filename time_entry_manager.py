@@ -11,10 +11,10 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 #####################################################################
 # =========================== CONSTANTES ========================== #
 #####################################################################
-
 
 # Chemin vers le dossier contenant les fichiers de données
 DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpements informatiques/IMATimeTrackerStreamlitApp/Data/"
@@ -26,6 +26,17 @@ ANNEES = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2]
 MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+SHAPE_BOX = {
+    "ha": 'center', 
+    "va": 'center', 
+    "fontsize": 12, 
+    "color": 'darkorange',
+    "bbox": dict(facecolor='none', edgecolor='darkorange', boxstyle='round,pad=0.5')
+}
+
+#####################################################################
+# ========================= INFO GENERALES========================= #
+#####################################################################
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
 viridis_palette = sns.color_palette("viridis", len(INT_CATEGORIES))
@@ -46,7 +57,8 @@ ARC_PASSWORDS = load_arc_passwords()
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
 #####################################################################
 
-
+# ========================================================================================================================================
+# CHARGEMENT DE DONNEE
 def load_data(DATA_FOLDER, arc):
     # Chemin vers le fichier Excel en fonction de l'ARC sélectionné
     csv_file_path = os.path.join(DATA_FOLDER, f"Time_{arc}.csv")
@@ -59,18 +71,23 @@ def load_data(DATA_FOLDER, arc):
         return pd.read_csv(csv_file_path, encoding='latin1', sep=";")
     except FileNotFoundError:
         # Si le fichier n'existe pas, afficher un message d'erreur
-        st.error(f"Le fichier {csv_file_path} n'existe pas.")
         return None
 
-def calculate_weeks():
-    current_date = datetime.datetime.now()
-    current_week = current_date.isocalendar()[1]
-    previous_week = current_week - 1 if current_week > 1 else 52
-    next_week = current_week + 1 if current_week < 52 else 1
-    current_year = current_date.year
-    current_month = current_date.month
-    return previous_week, current_week, next_week, current_year, current_month
+def load_all_study_names(DATA_FOLDER):
+    # Récupérer la liste de tous les fichiers dans le dossier spécifié
+    all_files = os.listdir(DATA_FOLDER)
+    # Filtrer pour ne garder que les fichiers qui commencent par "Time_"
+    time_files = [file for file in all_files if file.startswith("Time_")]
 
+    # Ensemble pour stocker les noms d'études uniques
+    unique_studies = set()
+
+    for file in time_files:
+        arc_name = file.split('_')[1].split('.')[0]  # Extraire le nom de l'ARC depuis le nom du fichier
+        df = load_data(DATA_FOLDER, arc_name)
+        if df is not None:
+            unique_studies.update(df['STUDY'].unique())
+    return sorted(list(unique_studies))
 
 # Chargement des données des ARC
 def load_arc_info():
@@ -82,11 +99,125 @@ def load_study_info():
     file_path = os.path.join(DATA_FOLDER, STUDY_INFO_FILE)
     return pd.read_csv(file_path, sep=';', dtype=str)
 
+# ========================================================================================================================================
+# SAUVEGARDE
 # Sauvegarde des données modifiées
 def save_data(file_name, df):
     file_path = os.path.join(DATA_FOLDER, file_name)
     df.to_csv(file_path, index=False, sep=';', encoding='utf-8')
 
+# ========================================================================================================================================
+# GRAPH ET AFFICHAGE
+
+def create_bar_chart(data, title, week_or_month):
+    """Crée un graphique en barres pour les données fournies avec des couleurs cohérentes."""
+    fig, ax = plt.subplots(figsize=(10, 4))
+
+    # Définition de l'ordre des catégories et des couleurs correspondantes
+    category_order = data.index.tolist()
+    color_palette = sns.color_palette("viridis", len(category_order))
+
+    # Mapping des couleurs aux catégories
+    color_mapping = dict(zip(category_order, color_palette))
+
+    # Création du graphique en barres avec l'ordre des couleurs défini
+    sns.barplot(x=data.index, y='Total Time', data=data, ax=ax, palette=color_mapping)
+    ax.set_title(f'{title} pour {week_or_month}')
+    ax.set_xlabel('')
+    ax.set_ylabel('Heures')
+    ax.xaxis.set_ticks_position('none') 
+    ax.yaxis.set_ticks_position('none')
+    sns.despine(left=False, bottom=False)
+    plt.xticks(rotation=45)
+    st.pyplot(fig)
+
+def plot_pie_chart_on_ax(df_study_sum, title, ax):
+    colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
+    
+    wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
+    
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_size(10)
+    
+    ax.set_title(title)
+
+def generate_charts_for_time_period(df, studies, period, period_label):
+    st.write(f"Graphiques pour la période sélectionnée")
+    
+    if len(studies) > 0:
+        nrows = (len(studies) + 1) // 2 if len(studies) % 2 else len(studies) // 2
+        fig, axs = plt.subplots(nrows=nrows, ncols=2, figsize=(10, 5 * nrows))
+        axs = axs.flatten()  # Aplatir le tableau d'axes pour un accès simplifié
+
+        for i, study in enumerate(studies):
+            df_study = df[df['STUDY'] == study]
+            df_study_sum = df_study[INT_CATEGORIES].fillna(0).sum()
+            df_study_sum = df_study_sum[df_study_sum > 0]
+
+            if df_study_sum.sum() > 0:
+                plot_pie_chart_on_ax(df_study_sum, f'Temps par Tâche pour {study} ({period_label} {period})', axs[i])
+            else:
+                # Ajouter le texte avec un cadre arrondi
+                axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {study}", **SHAPE_BOX)
+                axs[i].set_axis_off()  # Masquer les axes si pas de données
+
+        # Masquer les axes supplémentaires s'ils ne sont pas utilisés
+        for j in range(i + 1, len(axs)):
+            axs[j].axis('off')
+
+        plt.tight_layout()
+        st.pyplot(fig) 
+    else:
+        st.warning("Aucune étude sélectionnée ou aucune donnée disponible pour les études sélectionnées.")
+
+def process_and_display_data(df, period_label, period_value):
+    df_activities = df.groupby('STUDY')[INT_CATEGORIES].sum()
+    df_activities['Total Time'] = df_activities.sum(axis=1)
+    df_activities_sorted = df_activities.sort_values('Total Time', ascending=False)
+    create_bar_chart(df_activities_sorted, f'Heures Passées par Étude', f'{period_label} {period_value}')
+    
+    # Calcul et affichage du temps total passé et du nombre total de visites
+    total_time_spent = df_activities_sorted['Total Time'].sum()
+    unit = "heure" if total_time_spent <= 1 else "heures"
+    total_visits = int(sum(df['NB_VISITE']))
+    
+    time, visit = st.columns(2)
+    with time:
+        st.metric(label="Temps total passé", value=f"{total_time_spent} {unit}")
+    with visit:
+        st.metric(label="Nombre total de visites", value=f"{total_visits}")
+
+def generate_time_series_chart(data_dict, title_prefix):
+    """Génère et affiche un graphique en série temporelle pour les données fournies."""
+    if data_dict:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        for arc, data in data_dict.items():
+            sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=data, label=arc)
+
+        plt.title(f"{title_prefix} du Temps Total Passé par Chaque ARC")
+        plt.xlabel('Semaines')
+        plt.ylabel('Temps Total (Heures)')
+        # Définir les ticks de l'axe des X pour utiliser uniquement des valeurs entières
+        ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+        plt.legend()
+        st.pyplot(fig)
+    else:
+        st.error("Aucune donnée disponible pour l'affichage du graphique.")
+
+# ========================================================================================================================================
+# CALCULS
+def calculate_weeks():
+    current_date = datetime.datetime.now()
+    current_week = current_date.isocalendar()[1]
+    previous_week = current_week - 1 if current_week > 1 else 52
+    next_week = current_week + 1 if current_week < 52 else 1
+    current_year = current_date.year
+    current_month = current_date.month
+    return previous_week, current_week, next_week, current_year, current_month
+
+# ========================================================================================================================================
+# CREATION ET MODIFICATION
 # Vérifie et crée un fichier pour chaque ARC dans le DataFrame
 def create_time_files_for_arcs(df):
     for arc_name in df['ARC']:
@@ -119,164 +250,101 @@ def delete_row(df, row_to_delete, file_name):
     save_data(file_name, df)
     return df
 
-def create_bar_chart(data, title, week_or_month):
-    """Crée un graphique en barres pour les données fournies avec des couleurs cohérentes."""
-    fig, ax = plt.subplots(figsize=(10, 4))
-
-    # Définition de l'ordre des catégories et des couleurs correspondantes
-    category_order = data.index.tolist()
-    color_palette = sns.color_palette("viridis", len(category_order))
-
-    # Mapping des couleurs aux catégories
-    color_mapping = dict(zip(category_order, color_palette))
-
-    # Création du graphique en barres avec l'ordre des couleurs défini
-    sns.barplot(x=data.index, y='Total Time', data=data, ax=ax, palette=color_mapping)
-    ax.set_title(f'{title} pour {week_or_month}')
-    ax.set_xlabel('')
-    ax.set_ylabel('Heures')
-    plt.xticks(rotation=45)
-    st.pyplot(fig)
-
-# VERSION MEME TAILLE
-def plot_pie_chart_on_ax(df_study_sum, title, ax):
-    colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
-    
-    wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
-    
-    for autotext in autotexts:
-        autotext.set_color('white')
-        autotext.set_size(10)
-    
-    ax.set_title(title)
-
-# # VERSION DIFFERENTE TAILLE
-# def plot_pie_chart_on_ax(df_study_sum, title, ax):
-#     # Exemple de calcul d'un facteur basé sur le temps total
-#     total_time = df_study_sum.sum()
-#     scale_factor = max(1, total_time / 100)  # Ajustez ce calcul selon vos besoins
-
-#     # Taille de la figure ajustée en fonction du scale_factor
-#     fig_size = (6 * scale_factor, 6 * scale_factor)
-
-#     # Ajustez la figure courante avant de tracer le camembert
-#     ax.figure.set_size_inches(fig_size)
-
-#     # Tracer le camembert
-#     colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
-#     wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * total_time / 100), startangle=140, colors=colors)
-    
-#     ax.set_title(title)
-
-
-
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
 
 # Fonction principale de l'application Streamlit
 def main():
-    st.set_page_config(layout="wide")
+    try:
+            st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
+    except:
+        pass
     st.title("I-Motion Adulte - Espace Chefs de Projets")
 
     # Onglet de sélection
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Configuration des ARCs", "Configuration des études", "Tableaux de bord par ARC", "Tableau de bord général",  "Archives des études"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - ARCs", "📉 Dashboard - Etudes", "📊 Dashboard - Général",  "📁 Archives - Etudes"])
 
+# ----------------------------------------------------------------------------------------------------------
     with tab1:
         arc_df = load_arc_info()
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("#### Gestion des ARC")
-            arc_to_delete = st.selectbox("Choisir un ARC à supprimer", arc_df['ARC'])
-            if st.button("Supprimer l'ARC sélectionné"):
-                arc_df = delete_row(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index, ARC_INFO_FILE)
-                st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
+        col_ajout, col_suppr, espace, col_modif = st.columns([2, 3, 1, 3])
+        with col_ajout:
+            st.markdown("#### Ajout d'un nouvel ARC")
             if st.button("Ajouter un ARC"):
                 arc_df = add_row_to_df(arc_df, ARC_INFO_FILE)
                 st.success("Nouvel ARC ajouté.")
 
-        with col2:
-            st.markdown("#### Modification des ARC")
-            updated_arc_df = st.data_editor(data=arc_df)
-            if st.button("Sauvegarder les modifications des ARC"):
+        with col_suppr:
+            st.markdown("#### Suppression d'un ARC")
+            arc_options = arc_df['ARC'].dropna().astype(str).tolist()
+            arc_to_delete = st.selectbox("Choisir un ARC à supprimer", sorted(arc_options))
+            if st.button("Archiver l'ARC sélectionné"):
+                arc_df = delete_row(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index, ARC_INFO_FILE)
+                st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
+
+        with col_modif:
+            st.markdown("#### Gestion des mots de passes")
+            updated_arc_df = st.data_editor(data=arc_df, hide_index=True)
+            if st.button("Sauvegarder les modifications"):
                 save_data(ARC_INFO_FILE, updated_arc_df)
                 create_time_files_for_arcs(updated_arc_df)
                 create_ongoing_files_for_arcs(updated_arc_df) 
                 st.success("Informations ARC sauvegardées avec succès.")
 
+# ----------------------------------------------------------------------------------------------------------
     with tab2:
         study_df = load_study_info()
 
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("#### Gestion des Études")
-            study_to_delete = st.selectbox("Choisir une étude à supprimer", study_df['STUDY'])
-            if st.button("Supprimer l'étude sélectionnée"):
-                study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
-                st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
+        col_ajout, col_suppr, espace, col_modif = st.columns([2, 3, 1, 3])
+        with col_ajout:
+            st.markdown("#### Ajout d'une nouvelle étude")
             if st.button("Ajouter une Étude"):
                 study_df = add_row_to_df(study_df, STUDY_INFO_FILE)
                 st.success("Nouvelle Étude ajoutée.")
 
-        with col2:
-            st.markdown("#### Modification des Études")
-            updated_study_df = st.data_editor(data=study_df)
-            if st.button("Sauvegarder les modifications des Études"):
+        with col_suppr:
+            st.markdown("#### Suppression d'une étude")
+            study_options = study_df['STUDY'].dropna().astype(str).tolist()
+            study_to_delete = st.selectbox("Choisir une étude à supprimer", sorted(study_options))
+            if st.button("Archiver l'étude sélectionnée"):
+                study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
+                st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
+
+        with col_modif:
+            st.markdown("#### Affectation des études")
+            updated_study_df = st.data_editor(data=study_df, hide_index=True)
+            if st.button("Sauvegarder les modifications", key=0):
                 save_data(STUDY_INFO_FILE, updated_study_df)
                 st.success("Informations des Études sauvegardées avec succès.")
 
-    # with tab3:
-    #     arc = st.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
-
-    #     # I. Chargement des données
-    #     df_data = load_data(DATA_FOLDER, arc)
-    #     previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
-
-    #     # II. Interface utilisateur pour la sélection de l'année et de la semaine
-    #     st.subheader("Visualisation")
-    #     col1, col2 = st.columns([1, 3])
-    #     with col1:
-    #         year_choice = st.selectbox("Année", ANNEES, index=ANNEES.index(datetime.datetime.now().year))
-    #     with col2:
-    #         week_choice = st.slider("Semaine", 1, 52, current_week)
-
-    #     # Filtrage et manipulation des données
-    #     filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
-
-    #     # Convertir certaines colonnes en entiers
-    #     int_columns = INT_CATEGORIES
-    #     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
-
-    #     # Appliquer le style
-    #     styled_df = filtered_df1.style.format({
-    #         "YEAR": "{:.0f}",
-    #         "WEEK": "{:.0f}"})
-
-    #     # Utiliser styled_df pour l'affichage
-    #     st.dataframe(styled_df, hide_index=True)
-
-
+# ----------------------------------------------------------------------------------------------------------
     with tab3:
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            arc = st.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()), key=2)
+        col_arc, col_year, espace1, espace2 = st.columns(4)
+
+        with col_arc:
+            arc = st.selectbox("Choix de l'ARC", list(ARC_PASSWORDS.keys()), key=2)
+
+        with col_year:
+            year_choice = st.selectbox("Année", ANNEES, key=3, index=ANNEES.index(datetime.datetime.now().year))
 
         # I. Chargement des données
         df_data = load_data(DATA_FOLDER, arc)
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
         associated_studies = df_data['STUDY'].unique().tolist()
+        filtered_studies_df = study_df[study_df['STUDY'].isin(associated_studies)]
+        associated_studies = filtered_studies_df['STUDY'].unique().tolist()
+
         # Liste des noms de mois
         month_names = MONTHS
 
         # II. Interface utilisateur pour la sélection de l'année, du mois et de la semaine
-        with col2:
-            year_choice = st.selectbox("Année", ANNEES, key=3, index=ANNEES.index(datetime.datetime.now().year))
-        col1, col2, col3 = st.columns([1, 0.25, 1])
-        with col1:
+        col_week, espace, col_month = st.columns([1, 0.25, 1])
+        with col_week:
             week_choice = st.slider("Semaine", 1, 52, current_week, key=4)
-        with col3:
+        with col_month:
             # Assurez-vous que le choix du mois utilise une clé différente
             selected_month_name = st.select_slider("Mois", options=month_names, 
                             value=month_names[current_month - 1], key=6)
@@ -301,34 +369,13 @@ def main():
         filtered_month_df[int_columns] = filtered_month_df[int_columns].astype(int)
 
 
-        with col1:
-            df_activities_week = filtered_week_df.groupby('STUDY')[int_columns].sum()
-            df_activities_week['Total Time'] = df_activities_week.sum(axis=1)
-            df_activities_week_sorted = df_activities_week.sort_values('Total Time', ascending=False)
-            create_bar_chart(df_activities_week_sorted, 'Heures Passées par Étude', f'semaine {week_choice}')
-            # Calcul du temps total passé
-            total_time_spent = df_activities_week_sorted['Total Time'].sum()
-            # Affichage du temps total passé avec Markdown, de manière plus simple
-            unit = "heure" if total_time_spent <= 1 else "heures"
-            time, visit = st.columns(2)
-            with time:
-                st.metric(label="Temps total passé", value=f"{total_time_spent} {unit}")
-            with visit:
-                st.metric(label="Nombre total de visites", value=f"{int(sum(filtered_week_df['NB_VISITE']))}")
+        # Utilisation de la fonction pour les données hebdomadaires
+        with col_week:
+            process_and_display_data(filtered_week_df, "semaine", week_choice)
 
-        with col3:
-            df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
-            df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
-            df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
-            create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
-            # Calcul du temps total passé
-            total_time_spent = df_activities_month_sorted['Total Time'].sum()
-            unit = "heure" if total_time_spent <= 1 else "heures"
-            time, visit = st.columns(2)
-            with time:
-                st.metric(label="Temps total passé", value=f"{total_time_spent} {unit}")
-            with visit:
-                st.metric(label="Nombre total de visites", value=f"{int(sum(filtered_month_df['NB_VISITE']))}")
+        # Utilisation de la fonction pour les données mensuelles
+        with col_month:
+            process_and_display_data(filtered_month_df, "mois", selected_month_name)
 
         st.write("---")
 
@@ -344,62 +391,53 @@ def main():
 
         # Générer les graphiques pour la semaine dans la colonne de gauche
         with col_week:
-            st.write("Graphiques pour la semaine sélectionnée")
-            
-            # Initialiser la figure avec deux colonnes et un nombre adapté de lignes
-            fig, axs = plt.subplots(nrows=nrows, ncols=2, figsize=(10, 5 * nrows))
-            axs = axs.flatten()  # Aplatir le tableau d'axes pour un accès simplifié
-            
-            for i, sel_study in enumerate(sel_studies):
-                df_study_week = filtered_week_df[filtered_week_df['STUDY'] == sel_study]
-                df_study_week_sum = df_study_week[INT_CATEGORIES].fillna(0).sum()
-                df_study_week_sum = df_study_week_sum[df_study_week_sum > 0]
-                
-                if df_study_week_sum.sum() > 0:
-                    plot_pie_chart_on_ax(df_study_week_sum, f'Temps par Tâche pour {sel_study} (Semaine {week_choice})', axs[i])
-                else:
-                    # Ajouter le texte avec un cadre arrondi
-                    axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {sel_study}", 
-                                ha='center', va='center', fontsize=12, color='darkorange',
-                                bbox=dict(facecolor='none', edgecolor='darkorange', boxstyle='round,pad=0.5'))
-                    axs[i].set_axis_off()  # Masquer les axes si pas de données
-               
-            # Masquer les axes supplémentaires s'ils ne sont pas utilisés
-            for j in range(i + 1, len(axs)):
-                axs[j].axis('off')
-            
-            plt.tight_layout()
-            st.pyplot(fig)
-
+            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "la semaine")
+     
         # Répéter la même structure pour le mois dans la colonne de droite
         with col_month:
-            st.write("Graphiques pour le mois sélectionné")
-            
-            fig, axs = plt.subplots(nrows=nrows, ncols=2, figsize=(10, 5 * nrows))
-            axs = axs.flatten()
-            
-            for i, sel_study in enumerate(sel_studies):
-                df_study_month = filtered_month_df[filtered_month_df['STUDY'] == sel_study]
-                df_study_month_sum = df_study_month[INT_CATEGORIES].fillna(0).sum()
-                df_study_month_sum = df_study_month_sum[df_study_month_sum > 0]
-                
-                if df_study_month_sum.sum() > 0:
-                    plot_pie_chart_on_ax(df_study_month_sum, f'Temps par Tâche pour {sel_study} ({selected_month_name})', axs[i])
-                else:
-                    # Ajouter le texte avec un cadre arrondi
-                    axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {sel_study}", 
-                                ha='center', va='center', fontsize=12, color='darkorange',
-                                bbox=dict(facecolor='none', edgecolor='darkorange', boxstyle='round,pad=0.5'))
-                    axs[i].set_axis_off()  # Masquer les axes si pas de données
-            
-            
-            for j in range(i + 1, len(axs)):
-                axs[j].axis('off')
-            
-            plt.tight_layout()
-            st.pyplot(fig)
+            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "le mois")
 
+# ----------------------------------------------------------------------------------------------------------
     with tab4:
+        study_df = load_study_info()
+        month_names = MONTHS
+        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+
+        col_year, col_month, espace = st.columns([1, 3, 3])
+        with col_year:
+            year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
+        with col_month:
+            # Assurez-vous que le choix du mois utilise une clé différente
+            selected_month_name = st.select_slider("Mois", options=month_names, 
+                            value=month_names[current_month - 1], key=16)
+            # Convertir le nom du mois sélectionné en numéro
+            month_choice = month_names.index(selected_month_name) + 1
+
+        all_arcs_df = pd.DataFrame()
+        for arc in ARC_PASSWORDS.keys():
+            df_arc = load_data(DATA_FOLDER, arc)
+            if df_arc is not None:
+                df_arc['ARC'] = arc
+                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+
+        # Filtrage des données pour le tableau du mois
+        first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
+        last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
+        start_week = first_day_of_month.isocalendar()[1]
+        end_week = last_day_of_month.isocalendar()[1]
+        filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
+                                    (all_arcs_df['WEEK'] >= start_week) & 
+                                    (all_arcs_df['WEEK'] <= end_week)]
+
+        df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
+        df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
+        df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
+        col_graph, espace = st.columns([3, 3])
+        with col_graph:
+                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+
+# ----------------------------------------------------------------------------------------------------------
+    with tab5:
         arcs = list(ARC_PASSWORDS.keys())
 
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
@@ -433,47 +471,22 @@ def main():
             else:
                 st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
 
-        col1, col2 = st.columns(2)
+        col_month, col_year = st.columns(2)
         
-        # Graphique pour les 5 dernières semaines
-        with col1:
-            if dfs:
-                fig, ax = plt.subplots(figsize=(12, 6))
-                for arc, data in dfs.items():
-                    sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=data['last_5_weeks'], label=arc)
+        # Pour le graphique des 5 dernières semaines
+        with col_month:
+            generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire")
 
-                plt.title(f'Évolution Hebdomadaire du Temps Total Passé par Chaque ARC pour les 5 dernières semaines')
-                plt.xlabel('Semaines')
-                plt.ylabel('Temps Total (Heures)')
-
-                # Définir les ticks de l'axe des X pour utiliser uniquement des valeurs entières
-                ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
-                plt.legend()
-                st.pyplot(fig)
-            else:
-                st.error("Aucune donnée disponible pour l'affichage du graphique.")
-       
         # Pour le graphique de l'année en cours
-        with col2:
-            if dfs:
-                fig, ax = plt.subplots(figsize=(12, 6))
-                for arc, data in dfs.items():
-                    sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=data['current_year'], label=arc)
-
-                plt.title(f'Évolution Hebdomadaire du Temps Total Passé par Chaque ARC en {current_year}')
-                plt.xlabel('Semaines')
-                plt.ylabel('Temps Total (Heures)')
-                plt.xlim(1, 52)
-                plt.legend()
-                st.pyplot(fig)
-            else:
-                st.error("Aucune donnée disponible pour l'affichage du graphique.")
+        with col_year:
+            generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}")
 
 
-    with tab5:
+# ----------------------------------------------------------------------------------------------------------
+    with tab6:
         # Sélection d'une étude
-        study_info_df = load_study_info()
-        study_choice = st.selectbox("Choisissez votre étude", study_info_df['STUDY'].unique())
+        study_names = load_all_study_names(DATA_FOLDER)
+        study_choice = st.selectbox("Choisissez votre étude", study_names)
 
         # Chargement et combinaison des données de tous les ARCs
         all_arcs_df = pd.DataFrame()
@@ -494,9 +507,9 @@ def main():
 
 
         # Utilisation de st.columns pour diviser l'espace d'affichage
-        col1, col2, col3, col4 = st.columns([1, 1, 0.2, 1])
+        col_table, col_graph, espace, col_arc = st.columns([1, 1, 0.2, 1])
 
-        with col1:
+        with col_table:
             st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
             
             # Commencer par un header de Markdown pour le tableau
@@ -510,7 +523,7 @@ def main():
             st.markdown(markdown_table)
 
 
-        with col2:
+        with col_graph:
             # Préparation et affichage du graphique en camembert dans la deuxième colonne
             fig, ax = plt.subplots()
             # Assurez-vous que total_time_by_category est défini avant cette ligne
@@ -518,13 +531,11 @@ def main():
             if total_time_by_category.sum() > 0:
                 plot_pie_chart_on_ax(total_time_by_category, f"Répartition du temps par catégorie pour l'étude {study_choice}", ax)
             else:
-                ax.text(0.5, 0.5, "Aucune donnée disponible\npour cette catégorie", 
-                        ha='center', va='center', fontsize=12, color='darkorange',
-                        bbox=dict(facecolor='none', edgecolor='darkorange', boxstyle='round,pad=0.5'))
+                axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {sel_study}", **SHAPE_BOX)
                 ax.set_axis_off()  # Masquer les axes si pas de données
             st.pyplot(fig)
 
-        with col4:
+        with col_arc:
             st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
             
             # Grouper les données par ARC et calculer le total
@@ -539,8 +550,6 @@ def main():
                 st.markdown(markdown_table)
             else:
                 st.write("Aucune donnée disponible pour cette étude.")
-
-
 
 
 #####################################################################
