@@ -245,7 +245,7 @@ def main():
 
     # Authentification de l'utilisateur
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
-    arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
+    arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe", type="password")
     
     with st.sidebar.expander("Glossaire des catégories"):
         display_glossary(COLUMN_CONFIG)
