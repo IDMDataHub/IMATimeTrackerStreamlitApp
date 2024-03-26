@@ -28,7 +28,7 @@ COLUMN_CONFIG = {
     },
     'STUDY': {"label": 'Étude', "description": "Nom de l'étude"
     },
-    'MISE EN PLACE': {"label": 'Mise en Pl.', "description": "Mise en place"
+    'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"
     },
     'VISITES PATIENT': {"label": 'Visites', "description": "Visites patient"
     },
