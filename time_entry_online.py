@@ -22,74 +22,39 @@ CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUER
 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
 COLUMN_CONFIG = {
-    'YEAR': {
-        "label": 'Année', 
-        "description": "Année"
+    'YEAR': {"label": 'Année', "description": "Année"
     },
-    'WEEK': {
-        "label": 'Sem.', 
-        "description": "Numéro de la semaine"
+    'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"
     },
-    'STUDY': {
-        "label": 'Étude', 
-        "description": "Nom de l'étude"
+    'STUDY': {"label": 'Étude', "description": "Nom de l'étude"
     },
-    'MISE EN PLACE': {
-        "label": 'Mise en Pl.', 
-        "description": "Mise en place"
+    'MISE EN PLACE': {"label": 'Mise en Pl.', "description": "Mise en place"
     },
-    'VISITES PATIENT': {
-        "label": 'Visites', 
-        "description": "Visites patient"
+    'VISITES PATIENT': {"label": 'Visites', "description": "Visites patient"
     },
-    'QUERIES': {
-        "label": 'Queries', 
-        "description": "Queries"
+    'QUERIES': {"label": 'Queries', "description": "Queries"
     },
-    'SAISIE CRF': {
-        "label": 'CRF', 
-        "description": "Saisie CRF"
+    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"
     },
-    'REUNIONS': {
-        "label": 'Réunions', 
-        "description": "Réunions"
+    'REUNIONS': {"label": 'Réunions', "description": "Réunions"
     },
-    'REMOTE': {
-        "label": 'Remote', 
-        "description": "Remote"
-        
-   },
-    'MONITORING': {
-        "label": 'Monit.', 
-        "description": "Monitoring"
+    'REMOTE': {"label": 'Remote', "description": "Remote"
     },
-    'TRAINING': {
-        "label": 'Form.', 
-        "description": "Formation"
+    'MONITORING': {"label": 'Monit.', "description": "Monitoring"
     },
-    'ARCHIVAGE EMAIL': {
-        "label": 'Arch. Email', 
-        "description": "Archivage des emails"
+    'TRAINING': {"label": 'Form.', "description": "Formation"
     },
-    'MAJ DOC': {
-        "label": 'MAJ. Docs', 
-        "description": "Mise à jour des documents (ISF & Gaia)"
+    'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"
     },
-    'AUDIT & INSPECTION': {
-        "label": 'Audit & Insp.', 
-        "description": "Audit et Inspection"
+    'MAJ DOC': {"label": 'MAJ. Docs', "description": "Mise à jour des documents (ISF & Gaia)"
     },
-    'CLOTURE': {
-        "label": 'Clôture', 
-        "description": "Clôture"
+    'AUDIT & INSPECTION': {"label": 'Audit & Insp.', "description": "Audit et Inspection"
     },
-    'COMMENTAIRE': {
-        "label": 'Comm.', 
-        "description": "Commentaires"
+    'CLOTURE': {"label": 'Clôture', "description": "Clôture"
     },
-    'NB_VISITE': {
-        "label": 'Nb Visites', 
-        "description": "Nombre de visites"
+    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"
+    },
+    'NB_VISITE': {"label": 'Nb Visites', "description": "Nombre de visites"
     }
 }
 
@@ -265,7 +230,7 @@ def display_glossary(column_config):
         description = config.get("description", "Description non fournie")
         glossary_html += f"<b>{label}</b>: {description}<br>"
     glossary_html += "</div>"
-    st.sidebar.markdown(glossary_html, unsafe_allow_html=True)
+    st.markdown(glossary_html, unsafe_allow_html=True)
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
