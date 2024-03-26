@@ -18,27 +18,27 @@ from io import StringIO, BytesIO
 BUCKET_NAME = "bucketidb"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 
-'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
-INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
+'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'COMMENTAIRE']
+INT_CATEGORIES = CATEGORIES[3:-1]
 COLUMN_CONFIG = {
     'YEAR': {"label": 'Année', "description": "Année"},
     'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"},
     'STUDY': {"label": 'Étude', "description": "Nom de l'étude"},
     'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"},
-    'VISITES PATIENT': {"label": 'Visites', "description": "Visites patient"},
-    'QUERIES': {"label": 'Quer.', "description": "Queries"},
-    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"},
-    'REUNIONS': {"label": 'Réu.', "description": "Réunions"},
-    'REMOTE': {"label": 'Rem.', "description": "Remote"},
-    'MONITORING': {"label": 'Monit.', "description": "Monitoring"},
     'TRAINING': {"label": 'Form.', "description": "Formation"},
+    'VISITES': {"label": 'Vis.', "description": "Organisation des Visites"},
+    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"},
+    'QUERIES': {"label": 'Quer.', "description": "Queries"},
+    'MONITORING': {"label": 'Monit.', "description": "Monitoring"},
+    'REMOTE': {"label": 'Rem.', "description": "Remote"},
+    'REUNIONS': {"label": 'Réu.', "description": "Réunions"},
     'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"},
     'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"},
     'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"},
     'CLOTURE': {"label": 'Clôture', "description": "Clôture"},
-    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"},
-    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"}
+    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"},
+    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"}
 }
 
 s3_client = boto3.client(
@@ -165,9 +165,9 @@ def check_create_weekly_file(arc, year, week):
         new_studies = [study for study in assigned_studies if study not in existing_studies.tolist()]
         
         # Préparation des nouvelles lignes à ajouter uniquement pour les nouvelles études
-        rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
-                 'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-                 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in new_studies]
+        rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
+             'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
+             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in new_studies]
         if rows:  # S'il y a de nouvelles études à ajouter
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
             # Sauvegarde du DataFrame mis à jour sur S3
@@ -210,7 +210,7 @@ def display_glossary(column_config):
     for term, config in column_config.items():
         label = config["label"]
         description = config.get("description", "Description non fournie")
-        glossary_html += f"<b>{label}</b>: {description}<br>"
+        glossary_html += f"<b>{label}</b> : {description}<br>"
     glossary_html += "</div>"
     st.markdown(glossary_html, unsafe_allow_html=True)
 
@@ -325,9 +325,9 @@ def main():
         else:
             # time_df est complètement vide
             assigned_studies = set(load_assigned_studies(arc))
-            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
-             'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-             'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
+             'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
+             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
 

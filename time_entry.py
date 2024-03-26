@@ -18,27 +18,27 @@ DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpemen
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 
-'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
-INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
+'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'COMMENTAIRE']
+INT_CATEGORIES = CATEGORIES[3:-1]
 COLUMN_CONFIG = {
-    'YEAR': {"label": 'Année'},
-    'WEEK': {"label": 'Semaine'},
-    'STUDY': {"label": 'Étude'},
-    'MISE EN PLACE': {"label": 'Mise en Place'},
-    'VISITES PATIENT': {"label": 'Visites'},
-    'QUERIES': {"label": 'Queries'},
-    'SAISIE CRF': {"label": 'Saisie CRF'},
-    'REUNIONS': {"label": 'Réunions'},
-    'REMOTE': {"label": 'Remote'},
-    'MONITORING': {"label": 'Monitoring'},
-    'TRAINING': {"label": 'Formation'},
-    'ARCHIVAGE EMAIL': {"label": 'Archiv. Email'},
-    'MAJ DOC': {"label": 'MAJ. Docs'},
-    'AUDIT & INSPECTION': {"label": 'Audit & Inspect.'},
-    'CLOTURE': {"label": 'Clôture'},
-    'COMMENTAIRE': {"label": 'Commentaire'},
-    'NB_VISITE': {"label": 'Nb Visites'}
+    'YEAR': {"label": 'Année', "description": "Année"},
+    'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"},
+    'STUDY': {"label": 'Étude', "description": "Nom de l'étude"},
+    'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"},
+    'TRAINING': {"label": 'Form.', "description": "Formation"},
+    'VISITES': {"label": 'Vis.', "description": "Organisation des Visites"},
+    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"},
+    'QUERIES': {"label": 'Quer.', "description": "Queries"},
+    'MONITORING': {"label": 'Monit.', "description": "Monitoring"},
+    'REMOTE': {"label": 'Rem.', "description": "Remote"},
+    'REUNIONS': {"label": 'Réu.', "description": "Réunions"},
+    'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"},
+    'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"},
+    'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"},
+    'CLOTURE': {"label": 'Clôture', "description": "Clôture"},
+    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"},
+    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"}
 }
 
 # Chargement des mots de passe ARC
@@ -129,9 +129,9 @@ def check_create_weekly_file(arc, year, week):
         return None
 
     assigned_studies = load_assigned_studies(arc)
-    rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
-             'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-             'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+    rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
+             'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
+             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
     pd.DataFrame(rows).to_csv(file_path, index=False, sep=";", encoding='utf-8')
     return file_path
 
@@ -155,7 +155,7 @@ def display_glossary(column_config):
     for term, config in column_config.items():
         label = config["label"]
         description = config.get("description", "Description non fournie")
-        glossary_html += f"<b>{label}</b>: {description}<br>"
+        glossary_html += f"<b>{label}</b> : {description}<br>"
     glossary_html += "</div>"
     st.markdown(glossary_html, unsafe_allow_html=True)
 
@@ -268,9 +268,9 @@ def main():
         else:
             # time_df est complètement vide
             assigned_studies = set(load_assigned_studies(arc))
-            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
-             'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-             'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
+             'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
+             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
     # IV. Afficher le DataFrame dans l'éditeur de données
