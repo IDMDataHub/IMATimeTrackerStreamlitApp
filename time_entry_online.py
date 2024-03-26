@@ -229,12 +229,12 @@ def main():
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe", type="password")
     
-    with st.sidebar.expander("Glossaire des catégories"):
-        display_glossary(COLUMN_CONFIG)
-
     if not authenticate_user(arc, arc_password_entered):
         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
+    
+    with st.sidebar.expander("Glossaire des catégories"):
+        display_glossary(COLUMN_CONFIG)
 
     # I. Chargement des données
     df_data = load_data(arc)
