@@ -220,6 +220,26 @@ def main():
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
     
+    with st.sidebar.expander("Glossaire"):
+        st.markdown("""
+        **Année** : L'année concernée par les données.  
+        **Sem.** : Numéro de la semaine dans l'année.  
+        **Étude** : Nom de l'étude clinique.  
+        **Mise en Pl.** : Mise en place de l'étude.  
+        **Visites** : Nombre de visites patient.  
+        **Queries** : Interrogations liées aux données.  
+        **CRF** : Saisie des Case Report Forms.  
+        **Réunions** : Temps passé en réunions.  
+        **Remote** : Activités réalisées à distance.  
+        **Monit.** : Monitoring de l'étude.  
+        **Form.** : Formation reçue ou donnée.  
+        **Arch. Email** : Archivage des emails.  
+        **MAJ. Docs** : Mise à jour des documents.  
+        **Audit & Insp.** : Audit et inspection de l'étude.  
+        **Clôture** : Activités de clôture de l'étude.  
+        **Comm.** : Commentaires divers.  
+        **Nb Visites** : Nombre de visites réalisées.  
+        """, unsafe_allow_html=True)
     if not authenticate_user(arc, arc_password_entered):
         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
