@@ -97,9 +97,10 @@ def calculate_weeks():
     current_date = datetime.datetime.now()
     current_week = current_date.isocalendar()[1]
     previous_week = current_week - 1 if current_week > 1 else 52
+    two_weeks_ago = previous_week - 1 if previous_week > 1 else 52
     next_week = current_week + 1 if current_week < 52 else 1
-    current_year = datetime.datetime.now().year
-    return previous_week, current_week, next_week, current_year
+    current_year = current_date.year
+    return two_weeks_ago, previous_week, current_week, next_week, current_year
 
 def save_data(df, arc):
     # Création du chemin complet du fichier dans le bucket S3
