@@ -78,45 +78,44 @@ ARC_PASSWORDS = load_arc_passwords()
 
 # ========================================================================================================================================
 # CHARGEMENT DE DONNEE
-def load_data(DATA_FOLDER, arc):
-    # Chemin vers le fichier Excel en fonction de l'ARC sélectionné
-    csv_file_path = os.path.join(DATA_FOLDER, f"Time_{arc}.csv")
-
+def load_data(arc):
+    file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
     try:
-        # Essayer de lire le fichier avec l'encodage utf-8
-        return pd.read_csv(csv_file_path, encoding='utf-8', sep=";")
+        # Tentez de charger le fichier avec l'encodage UTF-8
+        return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
-        # Si UnicodeDecodeError est levé, essayer avec l'encodage latin1
-        return pd.read_csv(csv_file_path, encoding='latin1', sep=";")
-    except FileNotFoundError:
-        # Si le fichier n'existe pas, afficher un message d'erreur
-        return None
+        # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
+        return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
-def load_all_study_names(DATA_FOLDER):
-    # Récupérer la liste de tous les fichiers dans le dossier spécifié
-    all_files = os.listdir(DATA_FOLDER)
-    # Filtrer pour ne garder que les fichiers qui commencent par "Time_"
-    time_files = [file for file in all_files if file.startswith("Time_")]
 
+def load_all_study_names(bucket_name):
+    # Utiliser boto3 pour lister les objets dans le bucket S3
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix="Time_")
+    
     # Ensemble pour stocker les noms d'études uniques
     unique_studies = set()
 
-    for file in time_files:
-        arc_name = file.split('_')[1].split('.')[0]  # Extraire le nom de l'ARC depuis le nom du fichier
-        df = load_data(DATA_FOLDER, arc_name)
-        if df is not None:
-            unique_studies.update(df['STUDY'].unique())
+    if 'Contents' in response:
+        # Itérer sur chaque fichier qui commence par "Time_"
+        for obj in response['Contents']:
+            file_key = obj['Key']
+            arc_name = file_key.split('_')[1].split('.')[0]  # Extraire le nom de l'ARC depuis le nom du fichier dans le bucket
+            
+            # Charger les données depuis S3
+            df = load_csv_from_s3(bucket_name, file_key, sep=';', encoding='utf-8')
+            if not df.empty:
+                unique_studies.update(df['STUDY'].unique())
+    
     return sorted(list(unique_studies))
 
-# Chargement des données des ARC
-def load_arc_info():
-    file_path = os.path.join(DATA_FOLDER, ARC_INFO_FILE)
-    return pd.read_csv(file_path, sep=';', dtype=str)
 
-# Chargement des données des études
+def load_arc_info():
+    return load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
+
 def load_study_info():
-    file_path = os.path.join(DATA_FOLDER, STUDY_INFO_FILE)
-    return pd.read_csv(file_path, sep=';', dtype=str)
+    # Utilisez la fonction load_csv_from_s3 avec le nom de fichier STUDY_INFO_FILE et les paramètres appropriés
+    return load_csv_from_s3(BUCKET_NAME, STUDY_INFO_FILE, sep=';', encoding='utf-8')
+
 
 # ========================================================================================================================================
 # SAUVEGARDE
