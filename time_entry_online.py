@@ -36,7 +36,7 @@ COLUMN_CONFIG = {
     },
     'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"
     },
-    'REUNIONS': {"label": 'Réunions', "description": "Réunions"
+    'REUNIONS': {"label": 'Réu.', "description": "Réunions"
     },
     'REMOTE': {"label": 'Remote', "description": "Remote"
     },
@@ -46,15 +46,15 @@ COLUMN_CONFIG = {
     },
     'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"
     },
-    'MAJ DOC': {"label": 'MAJ. Docs', "description": "Mise à jour des documents (ISF & Gaia)"
+    'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"
     },
-    'AUDIT & INSPECTION': {"label": 'Audit & Insp.', "description": "Audit et Inspection"
+    'AUDIT & INSPECTION': {"label": 'Audit&Insp.', "description": "Audit et Inspection"
     },
     'CLOTURE': {"label": 'Clôture', "description": "Clôture"
     },
     'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"
     },
-    'NB_VISITE': {"label": 'Nb Visites', "description": "Nombre de visites"
+    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"
     }
 }
 
@@ -247,7 +247,7 @@ def main():
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
     
-    with st.sidebar.expander("Glossaire"):
+    with st.sidebar.expander("Glossaire des catégories"):
         display_glossary(COLUMN_CONFIG)
 
     if not authenticate_user(arc, arc_password_entered):
