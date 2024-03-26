@@ -259,11 +259,12 @@ def delete_ongoing_file(arc):
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
 def display_glossary(column_config):
-    glossary_html = ""
+    glossary_html = "<div style='margin-left: 10px;'>"
     for term, config in column_config.items():
         label = config["label"]
         description = config.get("description", "Description non fournie")
         glossary_html += f"<b>{label}</b>: {description}<br>"
+    glossary_html += "</div>"
     st.sidebar.markdown(glossary_html, unsafe_allow_html=True)
 
 #####################################################################
