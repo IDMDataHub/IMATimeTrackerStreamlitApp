@@ -244,6 +244,7 @@ def main():
     # Convertir certaines colonnes en entiers
     int_columns = INT_CATEGORIES
     st.write(int_columns)
+    st.write(filtered_df1)
     st.write(filtered_df1[int_columns])
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
 
