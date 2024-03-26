@@ -116,13 +116,19 @@ def load_study_info():
     # Utilisez la fonction load_csv_from_s3 avec le nom de fichier STUDY_INFO_FILE et les paramètres appropriés
     return load_csv_from_s3(BUCKET_NAME, STUDY_INFO_FILE, sep=';', encoding='utf-8')
 
-
 # ========================================================================================================================================
 # SAUVEGARDE
 # Sauvegarde des données modifiées
-def save_data(file_name, df):
-    file_path = os.path.join(DATA_FOLDER, file_name)
-    df.to_csv(file_path, index=False, sep=';', encoding='utf-8')
+def save_data_to_s3(bucket_name, file_name, df):
+    # Convertir le DataFrame en CSV en utilisant StringIO
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    
+    # Réinitialiser le pointeur au début du flux
+    csv_buffer.seek(0)
+    
+    # Uploader le CSV dans le bucket S3
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 # ========================================================================================================================================
 # GRAPH ET AFFICHAGE
@@ -259,35 +265,69 @@ def calculate_weeks():
 # CREATION ET MODIFICATION
 # Vérifie et crée un fichier pour chaque ARC dans le DataFrame
 def create_time_files_for_arcs(df):
-    for arc_name in df['ARC']:
-        if pd.notna(arc_name):  # Vérifier si le nom de l'ARC n'est pas vide
-            time_file_path = os.path.join(DATA_FOLDER, f"Time_{arc_name}.csv")
-            if not os.path.exists(time_file_path):
-                columns = CATEGORIES
-                new_df = pd.DataFrame(columns=columns)
-                new_df.to_csv(time_file_path, index=False, sep=';', encoding='utf-8')
+    for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
+        file_name = f"Time_{arc_name}.csv"
+        # La vérification de l'existence du fichier n'est pas nécessaire dans ce cas
+        # car écrire sur S3 écrasera le fichier si existant ou le créera si non existant
+        # Si vous souhaitez vraiment vérifier, vous devrez utiliser s3_client.head_object() dans un try/except
+        # Création d'un nouveau DataFrame avec les colonnes souhaitées
+        new_df = pd.DataFrame(columns=CATEGORIES)
+        # Conversion du DataFrame en chaîne CSV
+        csv_buffer = StringIO()
+        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+        # Envoi du contenu CSV au fichier dans S3
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def create_ongoing_files_for_arcs(df):
-    for arc_name in df['ARC']:
-        if pd.notna(arc_name):  # Vérifier si le nom de l'ARC n'est pas vide
-            ongoing_file_path = os.path.join(DATA_FOLDER, f"Ongoing_{arc_name}.csv")
-            if not os.path.exists(ongoing_file_path):
-                columns = CATEGORIES
-                new_df = pd.DataFrame(columns=columns)
-                new_df.to_csv(ongoing_file_path, index=False, sep=';', encoding='utf-8')
+    for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
+        file_name = f"Ongoing_{arc_name}.csv"
+        # La vérification de l'existence du fichier n'est pas nécessaire pour la création basique
+        # car écrire sur S3 créera le fichier s'il n'existe pas déjà
+        
+        # Création d'un nouveau DataFrame vide avec les colonnes spécifiées
+        new_df = pd.DataFrame(columns=CATEGORIES)
+        
+        # Convertir le DataFrame en chaîne CSV
+        csv_buffer = StringIO()
+        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+        
+        # Envoyer le contenu CSV au fichier dans S3
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+
 
 # Fonction pour ajouter une ligne à un DataFrame
-def add_row_to_df(df, file_name):
+def add_row_to_df_s3(bucket_name, file_name, df):
+    # Ajouter une nouvelle ligne au DataFrame avec des valeurs vides pour chaque colonne
     new_row = pd.DataFrame([["" for _ in df.columns]], columns=df.columns)
     df = pd.concat([df, new_row], ignore_index=True)
-    save_data(file_name, df)
+    
+    # Convertir le DataFrame mis à jour en chaîne CSV
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+    
+    # Sauvegarder le DataFrame mis à jour sur S3
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+    
     return df
 
-# Fonction pour supprimer une ligne d'un DataFrame
-def delete_row(df, row_to_delete, file_name):
+
+def delete_row_s3(bucket_name, file_name, df, row_to_delete):
+    # Supprimer la ligne spécifiée du DataFrame
     df = df.drop(row_to_delete)
-    save_data(file_name, df)
+    
+    # Convertir le DataFrame mis à jour en chaîne CSV
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+    
+    # Sauvegarder le DataFrame mis à jour sur S3
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+    
     return df
+
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
