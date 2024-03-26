@@ -7,8 +7,7 @@ import pandas as pd
 import datetime
 import locale
 import os
-import 
-
+from io import StringIO, BytesIO
 
 #####################################################################
 # =========================== CONSTANTES ========================== #
@@ -19,12 +18,14 @@ DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpemen
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 
+'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
 COLUMN_CONFIG = {
     'YEAR': {"label": 'Année'},
     'WEEK': {"label": 'Semaine'},
     'STUDY': {"label": 'Étude'},
+    'MISE EN PLACE': {"label": 'Mise en Place'},
     'VISITES PATIENT': {"label": 'Visites'},
     'QUERIES': {"label": 'Queries'},
     'SAISIE CRF': {"label": 'Saisie CRF'},
@@ -33,10 +34,12 @@ COLUMN_CONFIG = {
     'MONITORING': {"label": 'Monitoring'},
     'TRAINING': {"label": 'Formation'},
     'ARCHIVAGE EMAIL': {"label": 'Archiv. Email'},
+    'MAJ DOC': {"label": 'MAJ. Docs'},
+    'AUDIT & INSPECTION': {"label": 'Audit & Inspect.'},
+    'CLOTURE': {"label": 'Clôture'},
     'COMMENTAIRE': {"label": 'Commentaire'},
     'NB_VISITE': {"label": 'Nb Visites'}
 }
-
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -126,11 +129,13 @@ def check_create_weekly_file(arc, year, week):
         return None
 
     assigned_studies = load_assigned_studies(arc)
-    rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+    rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
              'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-             'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+             'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
     pd.DataFrame(rows).to_csv(file_path, index=False, sep=";", encoding='utf-8')
     return file_path
+
+TIME_FILES = "Time_{arc}.csv"
 
 # Charger les données hebdomadaires pour l'ARC
 def load_weekly_data(file_path):
@@ -224,7 +229,6 @@ def main():
                 # Récupérer les études actuellement assignées à cet ARC
                 assigned_studies = set(load_assigned_studies(arc))
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
-
                 # Remplacer les valeurs dans Ongoing avec celles de Time si elles ne sont pas 0
                 columns_to_update = CATEGORIES[3:]
                 for col in columns_to_update:
@@ -235,12 +239,10 @@ def main():
                 for study in assigned_studies:
                     if study not in merged_df['STUDY'].tolist():
                         new_row_data = {'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}
-                        new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:-1]})
+                        new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:]})
                         new_row_data['COMMENTAIRE_ongoing'] = "Aucun"
-                        new_row_data['NB_VISITE'] = 0
                         new_row = pd.DataFrame([new_row_data])
                         merged_df = pd.concat([merged_df, new_row], ignore_index=True)
-
                 # Filtrer les colonnes pour éliminer celles avec '_time'
                 filtered_columns = [col for col in merged_df.columns if '_time' not in col]
 
@@ -255,11 +257,10 @@ def main():
         else:
             # time_df est complètement vide
             assigned_studies = set(load_assigned_studies(arc))
-            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
-                     'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-                     'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+             'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
+             'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
-
 
     # IV. Afficher le DataFrame dans l'éditeur de données
     if not filtered_df2.empty:

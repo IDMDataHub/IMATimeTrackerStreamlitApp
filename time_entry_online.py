@@ -10,7 +10,6 @@ import os
 import boto3
 from io import StringIO, BytesIO
 
-
 #####################################################################
 # =========================== CONSTANTES ========================== #
 #####################################################################
@@ -19,12 +18,14 @@ from io import StringIO, BytesIO
 BUCKET_NAME = "bucketidb"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'COMMENTAIRE', 'NB_VISITE']
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUERIES', 'SAISIE CRF', 'REUNIONS', 'REMOTE', 
+'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
 COLUMN_CONFIG = {
     'YEAR': {"label": 'Année'},
     'WEEK': {"label": 'Semaine'},
     'STUDY': {"label": 'Étude'},
+    'MISE EN PLACE': {"label": 'Mise en Place'},
     'VISITES PATIENT': {"label": 'Visites'},
     'QUERIES': {"label": 'Queries'},
     'SAISIE CRF': {"label": 'Saisie CRF'},
@@ -33,6 +34,9 @@ COLUMN_CONFIG = {
     'MONITORING': {"label": 'Monitoring'},
     'TRAINING': {"label": 'Formation'},
     'ARCHIVAGE EMAIL': {"label": 'Archiv. Email'},
+    'MAJ DOC': {"label": 'MAJ. Docs'},
+    'AUDIT & INSPECTION': {"label": 'Audit & Inspect.'},
+    'CLOTURE': {"label": 'Clôture'},
     'COMMENTAIRE': {"label": 'Commentaire'},
     'NB_VISITE': {"label": 'Nb Visites'}
 }
@@ -73,13 +77,6 @@ def load_arc_passwords():
     return dict(zip(df['ARC'], df['MDP']))
 
 ARC_PASSWORDS = load_arc_passwords()
-
-# # Essayer de configurer la locale en français
-# try:
-#     locale.setlocale(locale.LC_TIME, 'fr_FR')
-# except locale.Error:
-#     st.error("Locale française non disponible sur ce système.")
-
 
 #####################################################################
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
@@ -167,9 +164,9 @@ def check_create_weekly_file(arc, year, week):
         new_studies = [study for study in assigned_studies if study not in existing_studies.tolist()]
         
         # Préparation des nouvelles lignes à ajouter uniquement pour les nouvelles études
-        rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0,
-                 'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0,
-                 'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in new_studies]
+        rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+                 'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
+                 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
 
         if rows:  # S'il y a de nouvelles études à ajouter
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
@@ -297,7 +294,7 @@ def main():
                 for study in assigned_studies:
                     if study not in merged_df['STUDY'].tolist():
                         new_row_data = {'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}
-                        new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:-1]})
+                        new_row_data.update({col + '_ongoing': 0 for col in columns_to_update[:]})
                         new_row_data['COMMENTAIRE_ongoing'] = "Aucun"
                         new_row = pd.DataFrame([new_row_data])
                         merged_df = pd.concat([merged_df, new_row], ignore_index=True)
@@ -316,9 +313,9 @@ def main():
         else:
             # time_df est complètement vide
             assigned_studies = set(load_assigned_studies(arc))
-            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'VISITES PATIENT': 0, 'QUERIES': 0, 
-                     'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
-                     'ARCHIVAGE EMAIL': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'VISITES PATIENT': 0, 'QUERIES': 0, 
+             'SAISIE CRF': 0, 'REUNIONS': 0, 'REMOTE': 0, 'MONITORING': 0, 'TRAINING': 0, 
+             'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 'COMMENTAIRE': "Aucun", 'NB_VISITE': 0} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
 
