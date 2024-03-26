@@ -32,13 +32,13 @@ COLUMN_CONFIG = {
     },
     'VISITES PATIENT': {"label": 'Visites', "description": "Visites patient"
     },
-    'QUERIES': {"label": 'Queries', "description": "Queries"
+    'QUERIES': {"label": 'Quer.', "description": "Queries"
     },
     'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"
     },
     'REUNIONS': {"label": 'Réu.', "description": "Réunions"
     },
-    'REMOTE': {"label": 'Remote', "description": "Remote"
+    'REMOTE': {"label": 'Rem.', "description": "Remote"
     },
     'MONITORING': {"label": 'Monit.', "description": "Monitoring"
     },
@@ -48,7 +48,7 @@ COLUMN_CONFIG = {
     },
     'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"
     },
-    'AUDIT & INSPECTION': {"label": 'Audit&Insp.', "description": "Audit et Inspection"
+    'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"
     },
     'CLOTURE': {"label": 'Clôture', "description": "Clôture"
     },
