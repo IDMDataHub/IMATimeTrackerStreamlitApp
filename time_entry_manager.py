@@ -131,7 +131,7 @@ def create_bar_chart(data, title, week_or_month):
     plt.xticks(rotation=45)
     st.pyplot(fig)
 
-def plot_pie_chart_on_ax(df_study_sum, title, ax):
+def plot_pie_chart_on_ax(df_study_sum, titre, ax):
     colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
     
     wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
@@ -140,7 +140,7 @@ def plot_pie_chart_on_ax(df_study_sum, title, ax):
         autotext.set_color('white')
         autotext.set_size(10)
     
-    ax.set_title(title)
+    ax.set_title(titre)
 
 def generate_charts_for_time_period(df, studies, period, period_label):
     st.write(f"Graphiques pour la période sélectionnée")
@@ -188,22 +188,43 @@ def process_and_display_data(df, period_label, period_value):
     with visit:
         st.metric(label="Nombre total de visites", value=f"{total_visits}")
 
-def generate_time_series_chart(data_dict, title_prefix):
-    """Génère et affiche un graphique en série temporelle pour les données fournies."""
-    if data_dict:
-        fig, ax = plt.subplots(figsize=(12, 6))
-        for arc, data in data_dict.items():
-            sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=data, label=arc)
-
-        plt.title(f"{title_prefix} du Temps Total Passé par Chaque ARC")
-        plt.xlabel('Semaines')
-        plt.ylabel('Temps Total (Heures)')
-        # Définir les ticks de l'axe des X pour utiliser uniquement des valeurs entières
-        ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
-        plt.legend()
-        st.pyplot(fig)
-    else:
+def generate_time_series_chart(data_dict, title_prefix, mode='year'):
+    """Génère et affiche un graphique en série temporelle pour les données fournies.
+    
+    Args:
+        data_dict (dict): Dictionnaire des données à tracer.
+        title_prefix (str): Préfixe pour le titre du graphique.
+        mode (str): 'last_5_weeks' pour les 5 dernières semaines, 'year' pour l'année en cours.
+    """
+    if not data_dict:
         st.error("Aucune donnée disponible pour l'affichage du graphique.")
+        return
+
+    _, current_week, _, current_year, _ = calculate_weeks()
+    if mode == 'year':
+        total_weeks = 52 if datetime.date(current_year, 12, 31).isocalendar()[1] == 1 else 53
+    else:
+        total_weeks = current_week  # S'arrête à la semaine en cours pour le mode 'last_5_weeks'
+    
+    fig, ax = plt.subplots(figsize=(12, 6))
+    for arc, data in data_dict.items():
+        if mode == 'year':
+            filtered_data = data[data['WEEK'] <= current_week]  # Pour l'année, s'arrête à la semaine en cours
+        else:
+            filtered_data = data  # Pour les 5 dernières semaines, utilise toutes les données disponibles
+        sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=filtered_data, label=arc)
+
+    plt.title(f"{title_prefix} du Temps Total Passé par Chaque ARC")
+    plt.xlabel('Semaines')
+    plt.ylabel('Temps Total (Heures)')
+    
+    if mode == 'year':
+        plt.xlim(1, total_weeks)
+        ax.set_xticks(np.arange(1, total_weeks + 1))
+    ax.xaxis.set_major_locator(plt.MaxNLocator(integer=True))
+    
+    plt.legend()
+    st.pyplot(fig)
 
 # ========================================================================================================================================
 # CALCULS
@@ -475,11 +496,11 @@ def main():
         
         # Pour le graphique des 5 dernières semaines
         with col_month:
-            generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire")
+            generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire", mode='last_5_weeks')
 
-        # Pour le graphique de l'année en cours
+                # Pour le graphique de l'année en cours
         with col_year:
-            generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}")
+            generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
 
 
 # ----------------------------------------------------------------------------------------------------------
@@ -531,10 +552,10 @@ def main():
             if total_time_by_category.sum() > 0:
                 plot_pie_chart_on_ax(total_time_by_category, f"Répartition du temps par catégorie pour l'étude {study_choice}", ax)
             else:
-                axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {sel_study}", **SHAPE_BOX)
-                ax.set_axis_off()  # Masquer les axes si pas de données
+                ax.text(0.5, 0.5, f"Aucune donnée disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes)  # Correction de la référence à la variable de choix d'étude et positionnement
+                ax.set_axis_off()  # Masquer les axes s'il n'y a pas de données
             st.pyplot(fig)
-
+            
         with col_arc:
             st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
             
