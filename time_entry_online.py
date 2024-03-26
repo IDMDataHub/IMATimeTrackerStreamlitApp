@@ -57,7 +57,8 @@ COLUMN_CONFIG = {
     'REMOTE': {
         "label": 'Remote', 
         "description": "Remote"
-   
+        
+   },
     'MONITORING': {
         "label": 'Monit.', 
         "description": "Monitoring"
