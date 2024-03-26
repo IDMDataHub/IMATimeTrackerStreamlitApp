@@ -153,10 +153,11 @@ def check_create_weekly_file(arc, year, week):
 
     try:
         df_existing = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
+        st.write(df_existing)
     except Exception as e:
         # Si le fichier n'existe pas ou une autre erreur se produit, créer un nouveau DataFrame
         df_existing = pd.DataFrame(columns=CATEGORIES)
-    
+        
     # Chargement des études assignées
     assigned_studies = load_assigned_studies(arc)
     if assigned_studies:
@@ -171,7 +172,7 @@ def check_create_weekly_file(arc, year, week):
 
         if rows:  # S'il y a de nouvelles études à ajouter
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
-
+            st.write(df_existing)
             # Sauvegarde du DataFrame mis à jour sur S3
             save_csv_to_s3(df_existing, BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     else:
