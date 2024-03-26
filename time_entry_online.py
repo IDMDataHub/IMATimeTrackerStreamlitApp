@@ -22,42 +22,24 @@ CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUER
 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
 COLUMN_CONFIG = {
-    'YEAR': {"label": 'Année', "description": "Année"
-    },
-    'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"
-    },
-    'STUDY': {"label": 'Étude', "description": "Nom de l'étude"
-    },
-    'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"
-    },
-    'VISITES PATIENT': {"label": 'Visites', "description": "Visites patient"
-    },
-    'QUERIES': {"label": 'Quer.', "description": "Queries"
-    },
-    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"
-    },
-    'REUNIONS': {"label": 'Réu.', "description": "Réunions"
-    },
-    'REMOTE': {"label": 'Rem.', "description": "Remote"
-    },
-    'MONITORING': {"label": 'Monit.', "description": "Monitoring"
-    },
-    'TRAINING': {"label": 'Form.', "description": "Formation"
-    },
-    'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"
-    },
-    'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"
-    },
-    'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"
-    },
-    'CLOTURE': {"label": 'Clôture', "description": "Clôture"
-    },
-    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"
-    },
-    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"
-    }
+    'YEAR': {"label": 'Année', "description": "Année"},
+    'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"},
+    'STUDY': {"label": 'Étude', "description": "Nom de l'étude"},
+    'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"},
+    'VISITES PATIENT': {"label": 'Visites', "description": "Visites patient"},
+    'QUERIES': {"label": 'Quer.', "description": "Queries"},
+    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"},
+    'REUNIONS': {"label": 'Réu.', "description": "Réunions"},
+    'REMOTE': {"label": 'Rem.', "description": "Remote"},
+    'MONITORING': {"label": 'Monit.', "description": "Monitoring"},
+    'TRAINING': {"label": 'Form.', "description": "Formation"},
+    'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"},
+    'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"},
+    'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"},
+    'CLOTURE': {"label": 'Clôture', "description": "Clôture"},
+    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"},
+    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"}
 }
-
 
 s3_client = boto3.client(
     's3',

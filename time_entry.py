@@ -150,6 +150,14 @@ def delete_ongoing_file(arc):
     if os.path.exists(ongoing_file_path):
         os.remove(ongoing_file_path)
 
+def display_glossary(column_config):
+    glossary_html = "<div style='margin-left: 10px;'>"
+    for term, config in column_config.items():
+        label = config["label"]
+        description = config.get("description", "Description non fournie")
+        glossary_html += f"<b>{label}</b>: {description}<br>"
+    glossary_html += "</div>"
+    st.markdown(glossary_html, unsafe_allow_html=True)
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
@@ -162,8 +170,11 @@ def main():
     # Authentification de l'utilisateur
     arc_options = [key for key in ARC_PASSWORDS.keys() if key == key]  # Les NaN ne sont pas égaux à eux-mêmes
     arc = st.sidebar.selectbox("Choisissez votre ARC", sorted(arc_options))
-    arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
+    arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe", type="password")
     
+    with st.sidebar.expander("Glossaire des catégories"):
+        display_glossary(COLUMN_CONFIG)
+
     if not authenticate_user(arc, arc_password_entered):
         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
