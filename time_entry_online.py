@@ -227,7 +227,7 @@ def main():
 
     # I. Chargement des données
     df_data = load_data(arc)
-    previous_week, current_week, next_week, current_year = calculate_weeks()
+    two_weeks_ago, previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Interface utilisateur pour la sélection de l'année et de la semaine
     st.subheader("Visualisation")
@@ -261,9 +261,10 @@ def main():
     
     week_choice2 = st.radio(
         "Choisissez une semaine",
-        [f"Semaine précédente (Semaine {previous_week})",
+        [f"Deux semaines avant (Semaine {two_weeks_ago})", 
+         f"Semaine précédente (Semaine {previous_week})",
          f"Semaine en cours (Semaine {current_week})"],
-        index=1)
+        index=2)
 
     # Récupérer la valeur sélectionnée (numéro de la semaine)
     selected_week = int(week_choice2.split()[-1].strip(')'))
