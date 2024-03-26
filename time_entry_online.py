@@ -22,24 +22,76 @@ CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'VISITES PATIENT', 'QUER
 'MONITORING', 'TRAINING', 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'COMMENTAIRE', 'NB_VISITE']
 INT_CATEGORIES = CATEGORIES[3:-2] + CATEGORIES[-1:]
 COLUMN_CONFIG = {
-    'YEAR': {"label": 'Année'},
-    'WEEK': {"label": 'Sem.'},
-    'STUDY': {"label": 'Étude'},
-    'MISE EN PLACE': {"label": 'Mise en Pl.'},
-    'VISITES PATIENT': {"label": 'Visites'},
-    'QUERIES': {"label": 'Queries'},
-    'SAISIE CRF': {"label": 'CRF'},
-    'REUNIONS': {"label": 'Réunions'},
-    'REMOTE': {"label": 'Remote'},
-    'MONITORING': {"label": 'Monit.'},
-    'TRAINING': {"label": 'Form.'},
-    'ARCHIVAGE EMAIL': {"label": 'Arch. Email'},
-    'MAJ DOC': {"label": 'MAJ. Docs'},
-    'AUDIT & INSPECTION': {"label": 'Audit & Insp.'},
-    'CLOTURE': {"label": 'Clôture'},
-    'COMMENTAIRE': {"label": 'Comm.'},
-    'NB_VISITE': {"label": 'Nb Visites'}
+    'YEAR': {
+        "label": 'Année', 
+        "description": "Année"
+    },
+    'WEEK': {
+        "label": 'Sem.', 
+        "description": "Numéro de la semaine"
+    },
+    'STUDY': {
+        "label": 'Étude', 
+        "description": "Nom de l'étude"
+    },
+    'MISE EN PLACE': {
+        "label": 'Mise en Pl.', 
+        "description": "Mise en place"
+    },
+    'VISITES PATIENT': {
+        "label": 'Visites', 
+        "description": "Visites patient"
+    },
+    'QUERIES': {
+        "label": 'Queries', 
+        "description": "Queries"
+    },
+    'SAISIE CRF': {
+        "label": 'CRF', 
+        "description": "Saisie CRF"
+    },
+    'REUNIONS': {
+        "label": 'Réunions', 
+        "description": "Réunions"
+    },
+    'REMOTE': {
+        "label": 'Remote', 
+        "description": "Remote"
+   
+    'MONITORING': {
+        "label": 'Monit.', 
+        "description": "Monitoring"
+    },
+    'TRAINING': {
+        "label": 'Form.', 
+        "description": "Formation"
+    },
+    'ARCHIVAGE EMAIL': {
+        "label": 'Arch. Email', 
+        "description": "Archivage des emails"
+    },
+    'MAJ DOC': {
+        "label": 'MAJ. Docs', 
+        "description": "Mise à jour des documents (ISF & Gaia)"
+    },
+    'AUDIT & INSPECTION': {
+        "label": 'Audit & Insp.', 
+        "description": "Audit et Inspection"
+    },
+    'CLOTURE': {
+        "label": 'Clôture', 
+        "description": "Clôture"
+    },
+    'COMMENTAIRE': {
+        "label": 'Comm.', 
+        "description": "Commentaires"
+    },
+    'NB_VISITE': {
+        "label": 'Nb Visites', 
+        "description": "Nombre de visites"
+    }
 }
+
 
 s3_client = boto3.client(
     's3',
@@ -205,6 +257,14 @@ def delete_ongoing_file(arc):
         # Gestion d'erreurs potentielles lors de la suppression
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
+def display_glossary(column_config):
+    glossary_html = ""
+    for term, config in column_config.items():
+        label = config["label"]
+        description = config.get("description", "Description non fournie")
+        glossary_html += f"<b>{label}</b>: {description}<br>"
+    st.sidebar.markdown(glossary_html, unsafe_allow_html=True)
+
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
@@ -221,25 +281,8 @@ def main():
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe pour {arc}", type="password")
     
     with st.sidebar.expander("Glossaire"):
-        st.markdown("""
-        **Année** : L'année concernée par les données.  
-        **Sem.** : Numéro de la semaine dans l'année.  
-        **Étude** : Nom de l'étude clinique.  
-        **Mise en Pl.** : Mise en place de l'étude.  
-        **Visites** : Nombre de visites patient.  
-        **Queries** : Interrogations liées aux données.  
-        **CRF** : Saisie des Case Report Forms.  
-        **Réunions** : Temps passé en réunions.  
-        **Remote** : Activités réalisées à distance.  
-        **Monit.** : Monitoring de l'étude.  
-        **Form.** : Formation reçue ou donnée.  
-        **Arch. Email** : Archivage des emails.  
-        **MAJ. Docs** : Mise à jour des documents.  
-        **Audit & Insp.** : Audit et inspection de l'étude.  
-        **Clôture** : Activités de clôture de l'étude.  
-        **Comm.** : Commentaires divers.  
-        **Nb Visites** : Nombre de visites réalisées.  
-        """, unsafe_allow_html=True)
+        display_glossary(COLUMN_CONFIG)
+
     if not authenticate_user(arc, arc_password_entered):
         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
