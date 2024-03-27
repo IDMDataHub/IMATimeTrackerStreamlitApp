@@ -295,7 +295,7 @@ def create_time_files_for_arcs(df):
             s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
             # Si aucune exception n'est levée, le fichier existe déjà, donc nous n'allons pas le créer
             st.write(f"Le fichier {file_name} existe déjà sur S3. Aucune action prise.")
-        except 
+        except: 
             # Le fichier n'existe pas, vous pouvez créer le fichier
             new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
             csv_buffer = StringIO()
