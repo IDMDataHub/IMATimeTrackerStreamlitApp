@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import boto3
 from io import StringIO, BytesIO
+import math
 
 
 #####################################################################
@@ -494,7 +495,7 @@ def main():
 
         for arc in arcs:
             st.write(arc)
-            if arc is not None:
+            if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
                 df_arc = load_data(arc)
                 df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
                 df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
