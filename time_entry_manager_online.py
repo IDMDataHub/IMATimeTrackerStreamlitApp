@@ -537,8 +537,8 @@ def main():
         # Chargement et combinaison des données de tous les ARCs
         all_arcs_df = pd.DataFrame()
         for arc in ARC_PASSWORDS.keys():
-            df_arc = load_data(arc)
-            if df_arc is not None:
+            if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
+                df_arc = load_data(arc)
                 df_arc['ARC'] = arc
                 all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
 
