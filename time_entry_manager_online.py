@@ -602,64 +602,64 @@ def main():
             st.metric(label="Nombre total de patients randomisés", value=rando_pat)
 
 # ----------------------------------------------------------------------------------------------------------
-    with tab6:
-        study_df = load_study_info()
-        month_names = MONTHS
-        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+    # with tab6:
+    #     study_df = load_study_info()
+    #     month_names = MONTHS
+    #     previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
-        col_year, col_month, espace = st.columns([1, 3, 3])
-        with col_year:
-            year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
-        with col_month:
-            # Assurez-vous que le choix du mois utilise une clé différente
-            selected_month_name = st.select_slider("Mois", options=month_names, 
-                            value=month_names[current_month - 1], key=16)
-            # Convertir le nom du mois sélectionné en numéro
-            month_choice = month_names.index(selected_month_name) + 1
+    #     col_year, col_month, espace = st.columns([1, 3, 3])
+    #     with col_year:
+    #         year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
+    #     with col_month:
+    #         # Assurez-vous que le choix du mois utilise une clé différente
+    #         selected_month_name = st.select_slider("Mois", options=month_names, 
+    #                         value=month_names[current_month - 1], key=16)
+    #         # Convertir le nom du mois sélectionné en numéro
+    #         month_choice = month_names.index(selected_month_name) + 1
 
-        all_arcs_df = pd.DataFrame()
-        for arc in ARC_PASSWORDS.keys():
-            df_arc = load_data(arc)
-            if df_arc is not None:
-                df_arc['ARC'] = arc
-                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+    #     all_arcs_df = pd.DataFrame()
+    #     for arc in ARC_PASSWORDS.keys():
+    #         df_arc = load_data(arc)
+    #         if df_arc is not None:
+    #             df_arc['ARC'] = arc
+    #             all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
 
-        # Filtrage des données pour le tableau du mois
-        first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
-        last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
-        start_week = first_day_of_month.isocalendar()[1]
-        end_week = last_day_of_month.isocalendar()[1]
-        filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
-                                    (all_arcs_df['WEEK'] >= start_week) & 
-                                    (all_arcs_df['WEEK'] <= end_week)]
+    #     # Filtrage des données pour le tableau du mois
+    #     first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
+    #     last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
+    #     start_week = first_day_of_month.isocalendar()[1]
+    #     end_week = last_day_of_month.isocalendar()[1]
+    #     filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
+    #                                 (all_arcs_df['WEEK'] >= start_week) & 
+    #                                 (all_arcs_df['WEEK'] <= end_week)]
 
-        df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
-        df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
-        df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
+    #     df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
+    #     df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
+    #     df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
 
-        filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
-        df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
+    #     filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
+    #     df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
 
-        col_graph1, col_graph2 = st.columns([3, 3])
-        with col_graph1:
-            create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
-        with col_graph2:
-            df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
-            create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
+    #     col_graph1, col_graph2 = st.columns([3, 3])
+    #     with col_graph1:
+    #         create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+    #     with col_graph2:
+    #         df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
+    #         create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
         
-        metrics_month, metrics_year, metrics_suivi = st.columns([3, 3, 3])
-        with metrics_month: 
-            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
-            st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
+    #     metrics_month, metrics_year, metrics_suivi = st.columns([3, 3, 3])
+    #     with metrics_month: 
+    #         nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+    #         st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
 
-        with metrics_year:
-            nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
-            st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
+    #     with metrics_year:
+    #         nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
+    #         st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
 
-        with metrics_suivi:
-            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
-            nb_eos = int(df_patient_included_month['NB_EOS'].sum())
-            st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
+    #     with metrics_suivi:
+    #         nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+    #         nb_eos = int(df_patient_included_month['NB_EOS'].sum())
+    #         st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
