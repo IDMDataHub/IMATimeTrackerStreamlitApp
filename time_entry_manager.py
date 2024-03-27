@@ -415,11 +415,11 @@ def main():
 
         # Générer les graphiques pour la semaine dans la colonne de gauche
         with col_week:
-            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "la semaine")
+            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "semaine")
      
         # Répéter la même structure pour le mois dans la colonne de droite
         with col_month:
-            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "le mois")
+            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "mois")
 
 # ----------------------------------------------------------------------------------------------------------
     with tab4:
