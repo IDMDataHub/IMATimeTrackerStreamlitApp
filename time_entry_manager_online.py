@@ -268,7 +268,7 @@ def calculate_weeks():
     return previous_week, current_week, next_week, current_year, current_month
 
 # ========================================================================================================================================
-CREATION ET MODIFICATION
+# CREATION ET MODIFICATION
 # Vérifie et crée un fichier pour chaque ARC dans le DataFrame
 # def create_time_files_for_arcs(df):
 #     for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
