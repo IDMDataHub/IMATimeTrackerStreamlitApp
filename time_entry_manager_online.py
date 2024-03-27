@@ -308,24 +308,42 @@ def create_time_files_for_arcs(df):
             s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
             st.write(f"Le fichier {file_name} a été créé avec succès sur S3.")
 
+# def create_ongoing_files_for_arcs(df):
+#     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
+#         file_name = f"Ongoing_{arc_name}.csv"
+#         # La vérification de l'existence du fichier n'est pas nécessaire pour la création basique
+#         # car écrire sur S3 créera le fichier s'il n'existe pas déjà
+        
+#         # Création d'un nouveau DataFrame vide avec les colonnes spécifiées
+#         new_df = pd.DataFrame(columns=CATEGORIES)
+        
+#         # Convertir le DataFrame en chaîne CSV
+#         csv_buffer = StringIO()
+#         new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+#         csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+        
+#         # Envoyer le contenu CSV au fichier dans S3
+#         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+
 def create_ongoing_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
         file_name = f"Ongoing_{arc_name}.csv"
-        # La vérification de l'existence du fichier n'est pas nécessaire pour la création basique
-        # car écrire sur S3 créera le fichier s'il n'existe pas déjà
-        
-        # Création d'un nouveau DataFrame vide avec les colonnes spécifiées
-        new_df = pd.DataFrame(columns=CATEGORIES)
-        
-        # Convertir le DataFrame en chaîne CSV
-        csv_buffer = StringIO()
-        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
-        
-        # Envoyer le contenu CSV au fichier dans S3
-        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
-
+        try:
+            # Tentative de chargement du fichier pour vérifier son existence
+            s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
+            st.write(f"Le fichier {file_name} existe déjà sur S3. Aucune action prise.")
+        except:
+            # Si une exception est levée, cela signifie généralement que le fichier n'existe pas
+            # Création d'un nouveau DataFrame avec les colonnes souhaitées
+            new_df = pd.DataFrame(columns=CATEGORIES)
+            csv_buffer = StringIO()
+            new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+            csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+            # Envoi du contenu CSV au fichier dans S3
+            s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+            st.write(f"Le fichier {file_name} a été créé avec succès sur S3.")
+            
 # Fonction pour ajouter une ligne à un DataFrame
 def add_row_to_df_s3(bucket_name, file_name, df):
     # Ajouter une nouvelle ligne au DataFrame avec des valeurs vides pour chaque colonne
@@ -669,7 +687,7 @@ def main():
                     all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
                 except:
                     pass
-                    
+
         # Filtrage des données pour le tableau du mois
         first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
         last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
