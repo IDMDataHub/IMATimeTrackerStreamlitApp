@@ -295,20 +295,15 @@ def create_time_files_for_arcs(df):
             s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
             # Si aucune exception n'est levée, le fichier existe déjà, donc nous n'allons pas le créer
             st.write(f"Le fichier {file_name} existe déjà sur S3. Aucune action prise.")
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code == 'NoSuchKey' or error_code == '404':
-                # Le fichier n'existe pas, vous pouvez créer le fichier
-                new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
-                csv_buffer = StringIO()
-                new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-                csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
-                # Envoi du contenu CSV au fichier dans S3
-                s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
-                st.write(f"Le fichier {file_name} a été créé avec succès sur S3.")
-            else:
-                # Une autre erreur s'est produite, qui n'est pas due à l'absence du fichier
-                st.write(f"Une erreur inattendue est survenue lors de la vérification de l'existence du fichier {file_name}: {e}")
+        except 
+            # Le fichier n'existe pas, vous pouvez créer le fichier
+            new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
+            csv_buffer = StringIO()
+            new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+            csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+            # Envoi du contenu CSV au fichier dans S3
+            s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+            st.write(f"Le fichier {file_name} a été créé avec succès sur S3.")
 
 def create_ongoing_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
