@@ -354,7 +354,8 @@ def main():
         with col_ajout:
             st.markdown("#### Ajout d'un nouvel ARC")
             if st.button("Ajouter un ARC"):
-                arc_df = add_row_to_df(arc_df, ARC_INFO_FILE)
+                # arc_df = add_row_to_df(arc_df, ARC_INFO_FILE)
+                arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
                 st.success("Nouvel ARC ajouté.")
 
         with col_suppr:
