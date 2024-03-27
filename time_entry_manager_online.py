@@ -361,6 +361,7 @@ def main():
             if st.button("Ajouter un ARC"):
                 arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
                 st.success("Nouvel ARC ajouté.")
+                st.rerun()
 
         with col_suppr:
             st.markdown("#### Suppression d'un ARC")
@@ -369,6 +370,7 @@ def main():
             if st.button("Archiver l'ARC sélectionné"):
                 arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
                 st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
+                st.rerun()
 
         with col_modif:
             st.markdown("#### Gestion des mots de passes")
@@ -392,14 +394,14 @@ def main():
                 study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
                 st.success("Nouvelle Étude ajoutée.")
                 st.rerun()
-                
+
         with col_suppr:
             st.markdown("#### Suppression d'une étude")
             study_options = study_df['STUDY'].dropna().astype(str).tolist()
             study_to_delete = st.selectbox("Choisir une étude à supprimer", sorted(study_options))
             if st.button("Archiver l'étude sélectionnée"):
                 # study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
-                study_df = delete_row_s3(BUCKET_NAME, study_df[study_df['STUDY'] == study_to_delete].index, study_df)
+                study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
                 st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
                 st.rerun()
 
