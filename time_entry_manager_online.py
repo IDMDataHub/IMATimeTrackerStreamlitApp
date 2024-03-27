@@ -573,9 +573,12 @@ def main():
         all_arcs_df = pd.DataFrame()
         for arc in ARC_PASSWORDS.keys():
             if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
-                df_arc = load_data(arc)
-                df_arc['ARC'] = arc
-                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+                try:
+                    df_arc = load_data(arc)
+                    df_arc['ARC'] = arc
+                    all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+                except:
+                    pass
 
         # Filtrage des données par étude sélectionnée
         filtered_df_by_study = all_arcs_df[all_arcs_df['STUDY'] == study_choice]
