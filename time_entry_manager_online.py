@@ -47,13 +47,13 @@ s3_client = boto3.client(
     aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
 )
 
-def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8', datatype=int):
     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     body = obj['Body'].read().decode(encoding)
     
     # Utilisez pandas pour lire le CSV
-    data = pd.read_csv(StringIO(body), sep=sep, dtype=str)
+    data = pd.read_csv(StringIO(body), sep=sep, dtype=datatype)
     return data
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
@@ -457,7 +457,7 @@ def main():
         # Convertir certaines colonnes en entiers pour les deux tableaux
         int_columns = TIME_INT_CAT
         st.write(df_data)
-        st.write(type(year_choice))
+        st.write(year_choice)
         st.write(start_week)
         st.write(end_week)
         st.write(filtered_week_df)
