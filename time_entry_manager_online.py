@@ -455,9 +455,9 @@ def main():
         st.write(end_week)
         st.write(df_data['YEAR'])
         st.write(df_data['WEEK'])
-        filtered_month_df = df_data[(df_data['YEAR'] == year_choice) & 
-                                    (df_data['WEEK'] >= start_week) & 
-                                    (df_data['WEEK'] <= end_week)]
+        filtered_month_df = df_data[(int(df_data['YEAR']) == year_choice) & 
+                                    (int(df_data['WEEK']) >= start_week) & 
+                                    (int(df_data['WEEK']) <= end_week)]
 
         # Convertir certaines colonnes en entiers pour les deux tableaux
         int_columns = TIME_INT_CAT
