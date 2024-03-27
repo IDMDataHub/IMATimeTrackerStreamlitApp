@@ -269,42 +269,37 @@ def calculate_weeks():
 
 # ========================================================================================================================================
 CREATION ET MODIFICATION
-Vérifie et crée un fichier pour chaque ARC dans le DataFrame
-def create_time_files_for_arcs(df):
-    for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
-        file_name = f"Time_{arc_name}.csv"
-        # La vérification de l'existence du fichier n'est pas nécessaire dans ce cas
-        # car écrire sur S3 écrasera le fichier si existant ou le créera si non existant
-        # Si vous souhaitez vraiment vérifier, vous devrez utiliser s3_client.head_object() dans un try/except
-        # Création d'un nouveau DataFrame avec les colonnes souhaitées
-        new_df = pd.DataFrame(columns=CATEGORIES)
-        # Conversion du DataFrame en chaîne CSV
-        csv_buffer = StringIO()
-        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
-        # Envoi du contenu CSV au fichier dans S3
-        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
-
+# Vérifie et crée un fichier pour chaque ARC dans le DataFrame
 # def create_time_files_for_arcs(df):
-#     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
+#     for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
 #         file_name = f"Time_{arc_name}.csv"
-#         # Vérification de l'existence du fichier en tentant de le charger
-#         try:
-#             # Tentative de chargement du fichier. Si cela réussit, le fichier existe.
-#             loaded_df = load_csv_from_s3(BUCKET_NAME, file_name)
-#             if loaded_df is not None:
-#                 continue  # Passez au prochain arc_name si le fichier existe
-#         except:
-#             # Si une exception est levée lors de la tentative de chargement, nous assumons que le fichier n'existe pas
-#             pass  # On ne fait rien ici et on continue pour créer le fichier
-
-#         # Le fichier n'existe pas, vous pouvez créer le fichier
-#         new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
+#         # La vérification de l'existence du fichier n'est pas nécessaire dans ce cas
+#         # car écrire sur S3 écrasera le fichier si existant ou le créera si non existant
+#         # Si vous souhaitez vraiment vérifier, vous devrez utiliser s3_client.head_object() dans un try/except
+#         # Création d'un nouveau DataFrame avec les colonnes souhaitées
+#         new_df = pd.DataFrame(columns=CATEGORIES)
+#         # Conversion du DataFrame en chaîne CSV
 #         csv_buffer = StringIO()
 #         new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
 #         csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
 #         # Envoi du contenu CSV au fichier dans S3
 #         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+
+def create_time_files_for_arcs(df):
+    for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
+        file_name = f"Time_{arc_name}.csv"
+        # Essayez de charger le fichier pour vérifier son existence
+        try:
+            loaded_df = load_csv_from_s3(BUCKET_NAME, file_name)
+            # Si la fonction ne lève pas d'exception, le fichier existe
+        except Exception as e:  # Utilisation d'un except général pour capturer toute exception
+            # Le fichier n'existe pas, créez le fichier
+            new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
+            csv_buffer = StringIO()
+            new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+            csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+            # Envoi du contenu CSV au fichier dans S3
+            s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def create_ongoing_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
