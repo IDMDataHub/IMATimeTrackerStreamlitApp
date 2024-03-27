@@ -456,6 +456,10 @@ def main():
 
         # Convertir certaines colonnes en entiers pour les deux tableaux
         int_columns = TIME_INT_CAT
+        st.write(filtered_week_df)
+        st.write(TIME_INT_CAT)
+        st.write(filtered_week_df[TIME_INT_CAT])
+        
         filtered_week_df[int_columns] = filtered_week_df[int_columns].astype(int)
         filtered_month_df[int_columns] = filtered_month_df[int_columns].astype(int)
 
