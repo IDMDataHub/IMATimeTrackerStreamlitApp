@@ -81,6 +81,16 @@ def load_arc_passwords():
 
 ARC_PASSWORDS = load_arc_passwords()
 
+# Clés pour df1 (de YEAR à CLOTURE)
+keys_df_time = list(COLUMN_CONFIG.keys())[:list(COLUMN_CONFIG.keys()).index('CLOTURE')+1]
+
+# Clés pour df2 (YEAR, WEEK, STUDY et NB_VISITE à COMMENTAIRE)
+keys_df_quantity = ['YEAR', 'WEEK', 'STUDY'] + list(COLUMN_CONFIG.keys())[list(COLUMN_CONFIG.keys()).index('NB_VISITE'):]
+
+# Création des configurations pour chaque partie
+column_config_df_time = {k: COLUMN_CONFIG[k] for k in keys_df_time}
+column_config_df_quantity = {k: COLUMN_CONFIG[k] for k in keys_df_quantity}
+
 #####################################################################
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
 #####################################################################
