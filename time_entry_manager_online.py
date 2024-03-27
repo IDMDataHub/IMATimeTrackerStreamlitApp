@@ -273,6 +273,7 @@ def calculate_weeks():
 def create_time_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
         file_name = f"Time_{arc_name}.csv"
+        st.write(file_name)
         # La vérification de l'existence du fichier n'est pas nécessaire dans ce cas
         # car écrire sur S3 écrasera le fichier si existant ou le créera si non existant
         # Si vous souhaitez vraiment vérifier, vous devrez utiliser s3_client.head_object() dans un try/except
