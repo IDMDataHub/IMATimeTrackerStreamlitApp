@@ -227,6 +227,7 @@ def main():
     except:
         pass
     st.title("I-Motion Adulte - Espace ARCs")
+    st.write("---")
 
     # Authentification de l'utilisateur
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
