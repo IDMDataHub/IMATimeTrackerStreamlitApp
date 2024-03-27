@@ -287,24 +287,26 @@ def calculate_weeks():
 #         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def create_time_files_for_arcs(df):
-    for arc_name in df['ARC'].dropna().unique():  # Filtrer les valeurs NaN et travailler avec des noms uniques
+    for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
         file_name = f"Time_{arc_name}.csv"
-        # Vérification de l'existence du fichier
+        # Vérification de l'existence du fichier en tentant de le charger
         try:
-            s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            # Si le fichier n'existe pas, s3_client.head_object() lèvera une ClientError
-            if error_code == '404' or error_code == 'NoSuchKey':
-                # Le fichier n'existe pas, vous pouvez créer le fichier
-                new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
-                csv_buffer = StringIO()
-                new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-                csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
-                # Envoi du contenu CSV au fichier dans S3
-                s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
-            else:
-                pass
+            # Tentative de chargement du fichier. Si cela réussit, le fichier existe.
+            loaded_df = load_csv_from_s3(BUCKET_NAME, file_name)
+            if loaded_df is not None:
+                continue  # Passez au prochain arc_name si le fichier existe
+        except:
+            # Si une exception est levée lors de la tentative de chargement, nous assumons que le fichier n'existe pas
+            pass  # On ne fait rien ici et on continue pour créer le fichier
+
+        # Le fichier n'existe pas, vous pouvez créer le fichier
+        new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
+        csv_buffer = StringIO()
+        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+        # Envoi du contenu CSV au fichier dans S3
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+
 
 
 def create_ongoing_files_for_arcs(df):
