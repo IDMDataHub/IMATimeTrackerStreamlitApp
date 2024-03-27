@@ -50,17 +50,20 @@ s3_client = boto3.client(
 
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
-    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
-    body = obj['Body'].read().decode(encoding)
-    
     try:
-        # Essayer de lire le fichier avec l'encodage utf-8
-        return pd.read_csv(StringIO(body), encoding='utf-8', sep=sep)
-    except UnicodeDecodeError:
-        return pd.read_csv(StringIO(body), encoding='latin1', sep=sep)
-    except FileNotFoundError:
+        obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
+        body = obj['Body'].read().decode(encoding)
+        
+        try:
+            # Essayer de lire le fichier avec l'encodage utf-8
+            return pd.read_csv(StringIO(body), encoding='utf-8', sep=sep)
+        except UnicodeDecodeError:
+            return pd.read_csv(StringIO(body), encoding='latin1', sep=sep)
+        except FileNotFoundError:
+            return None
+    except:
         return None
-
+        
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
 viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
 
