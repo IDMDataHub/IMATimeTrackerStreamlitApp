@@ -63,7 +63,7 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
             return None
     except:
         return None
-        
+
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
 viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
 
@@ -528,25 +528,28 @@ def main():
 
         for arc in arcs:
             if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
-                df_arc = load_data(arc)
-                df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
-                df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
-                
-                # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
-                df_all_last_5_weeks = pd.DataFrame({'YEAR': current_year, 'WEEK': last_5_weeks, 'Total Time': 0}).merge(
-                    df_arc[(df_arc['YEAR'] == current_year) & (df_arc['WEEK'].isin(last_5_weeks))],
-                    on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
-                df_all_last_5_weeks['Total Time'] = df_all_last_5_weeks[['Total Time', 'Total Time_y']].max(axis=1)
-                df_all_last_5_weeks.drop(columns=['Total Time_y'], inplace=True)
-                
-                # Préparer un DataFrame pour toutes les semaines de l'année courante avec des valeurs par défaut à 0
-                df_all_current_year = pd.DataFrame({'YEAR': current_year, 'WEEK': all_weeks_current_year, 'Total Time': 0}).merge(
-                    df_arc[df_arc['YEAR'] == current_year],
-                    on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
-                df_all_current_year['Total Time'] = df_all_current_year[['Total Time', 'Total Time_y']].max(axis=1)
-                df_all_current_year.drop(columns=['Total Time_y'], inplace=True)
-                
-                dfs[arc] = {'last_5_weeks': df_all_last_5_weeks, 'current_year': df_all_current_year}
+                try:
+                    df_arc = load_data(arc)
+                    df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
+                    df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
+                    
+                    # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
+                    df_all_last_5_weeks = pd.DataFrame({'YEAR': current_year, 'WEEK': last_5_weeks, 'Total Time': 0}).merge(
+                        df_arc[(df_arc['YEAR'] == current_year) & (df_arc['WEEK'].isin(last_5_weeks))],
+                        on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
+                    df_all_last_5_weeks['Total Time'] = df_all_last_5_weeks[['Total Time', 'Total Time_y']].max(axis=1)
+                    df_all_last_5_weeks.drop(columns=['Total Time_y'], inplace=True)
+                    
+                    # Préparer un DataFrame pour toutes les semaines de l'année courante avec des valeurs par défaut à 0
+                    df_all_current_year = pd.DataFrame({'YEAR': current_year, 'WEEK': all_weeks_current_year, 'Total Time': 0}).merge(
+                        df_arc[df_arc['YEAR'] == current_year],
+                        on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
+                    df_all_current_year['Total Time'] = df_all_current_year[['Total Time', 'Total Time_y']].max(axis=1)
+                    df_all_current_year.drop(columns=['Total Time_y'], inplace=True)
+                    
+                    dfs[arc] = {'last_5_weeks': df_all_last_5_weeks, 'current_year': df_all_current_year}
+                except:
+                    pass
             else:
                 st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
 
