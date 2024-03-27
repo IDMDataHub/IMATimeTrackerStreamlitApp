@@ -53,7 +53,7 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     body = obj['Body'].read().decode(encoding)
     
     # Utilisez pandas pour lire le CSV
-    data = pd.read_csv(StringIO(body), sep=sep)
+    data = pd.read_csv(StringIO(body), sep=sep, dtype=str)
     return data
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
