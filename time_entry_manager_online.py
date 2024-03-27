@@ -52,9 +52,12 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     body = obj['Body'].read().decode(encoding)
     
-    # Utilisez pandas pour lire le CSV
-    data = pd.read_csv(StringIO(body), sep=sep)
-    return data
+    try:
+        # Essayer de lire le fichier avec l'encodage utf-8
+        return pd.read_csv(StringIO(body), encoding='utf-8', sep=sep)
+    except UnicodeDecodeError:
+        return pd.read_csv(StringIO(body), encoding='latin1', sep=sep)
+    except FileNotFoundError:
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
 viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
@@ -455,19 +458,8 @@ def main():
 
 
         # Convertir certaines colonnes en entiers pour les deux tableaux
-        int_columns = TIME_INT_CAT
-        st.write(df_data)
-        st.write(year_choice)
-        st.write(start_week)
-        st.write(end_week)
-        st.write(filtered_week_df)
-        st.write(TIME_INT_CAT)
-        st.write(filtered_week_df[TIME_INT_CAT])
-        st.write(df_data['YEAR'].unique())
-        st.write(df_data['WEEK'].unique())
-        
-        filtered_week_df[int_columns] = filtered_week_df[int_columns].astype(int)
-        filtered_month_df[int_columns] = filtered_month_df[int_columns].astype(int)
+        filtered_week_df[TIME_INT_CAT] = filtered_week_df[TIME_INT_CAT].astype(int)
+        filtered_month_df[TIME_INT_CAT] = filtered_month_df[TIME_INT_CAT].astype(int)
 
 
         # Utilisation de la fonction pour les données hebdomadaires
