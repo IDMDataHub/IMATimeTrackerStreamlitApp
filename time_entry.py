@@ -19,11 +19,11 @@ ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 TIME_FILES = "Time_{arc}.csv"
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
-'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'COMMENTAIRE']
-INT_CATEGORIES = CATEGORIES[3:-1]
+'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
+INT_CATEGORIES = CATEGORIES[3:-1] 
 COLUMN_CONFIG = {
     'YEAR': {"label": 'Année', "description": "Année"},
-    'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"},
+    'WEEK': {"label": 'Semaine', "description": "Numéro de la semaine"},
     'STUDY': {"label": 'Étude', "description": "Nom de l'étude"},
     'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"},
     'TRAINING': {"label": 'Form.', "description": "Formation"},
@@ -31,15 +31,19 @@ COLUMN_CONFIG = {
     'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"},
     'QUERIES': {"label": 'Quer.', "description": "Queries"},
     'MONITORING': {"label": 'Monit.', "description": "Monitoring"},
-    'REMOTE': {"label": 'Rem.', "description": "Remote"},
-    'REUNIONS': {"label": 'Réu.', "description": "Réunions"},
+    'REMOTE': {"label": 'Remote', "description": "Remote"},
+    'REUNIONS': {"label": 'Réunion', "description": "Réunions"},
     'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"},
     'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"},
-    'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"},
+    'AUDIT & INSPECTION': {"label": 'Audit & Insp.', "description": "Audit et Inspection"},
     'CLOTURE': {"label": 'Clôture', "description": "Clôture"},
-    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"},
+    'NB_VISITE': {"label": 'Nb Visite', "description": "Nombre de visites"},
+    'NB_PAT_SCR': {"label": 'Nb Pat. Scr.', "description": "Nombre de patients screenés"},
+    'NB_PAT_RAN': {"label": 'Nb Pat. Rand.', "description": "Nombre de patients randomisés"},
+    'NB_EOS': {"label": 'Nb EOS.', "description": "Nombre d'EOS"},
     'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"}
 }
+
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -55,6 +59,15 @@ try:
 except locale.Error:
     st.error("Locale française non disponible sur ce système.")
 
+# Clés pour df1 (de YEAR à CLOTURE)
+keys_df_time = list(COLUMN_CONFIG.keys())[:list(COLUMN_CONFIG.keys()).index('CLOTURE')+1]
+
+# Clés pour df2 (YEAR, WEEK, STUDY et NB_VISITE à COMMENTAIRE)
+keys_df_quantity = ['YEAR', 'WEEK', 'STUDY'] + list(COLUMN_CONFIG.keys())[list(COLUMN_CONFIG.keys()).index('NB_VISITE'):]
+
+# Création des configurations pour chaque partie
+column_config_df_time = {k: COLUMN_CONFIG[k] for k in keys_df_time}
+column_config_df_quantity = {k: COLUMN_CONFIG[k] for k in keys_df_quantity}
 
 #####################################################################
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
@@ -131,11 +144,9 @@ def check_create_weekly_file(arc, year, week):
     assigned_studies = load_assigned_studies(arc)
     rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
-             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
+             'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
     pd.DataFrame(rows).to_csv(file_path, index=False, sep=";", encoding='utf-8')
     return file_path
-
-TIME_FILES = "Time_{arc}.csv"
 
 # Charger les données hebdomadaires pour l'ARC
 def load_weekly_data(file_path):
@@ -166,6 +177,7 @@ def display_glossary(column_config):
 def main():
     st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace ARCs")
     st.title("I-Motion Adulte - Espace ARCs")
+    st.write("---")
 
     # Authentification de l'utilisateur
     arc_options = [key for key in ARC_PASSWORDS.keys() if key == key]  # Les NaN ne sont pas égaux à eux-mêmes
@@ -198,15 +210,24 @@ def main():
     int_columns = INT_CATEGORIES
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
 
-
+    df_time = filtered_df1[keys_df_time]
+    df_quantity = filtered_df1[keys_df_quantity]
+    
     # Appliquer le style
-    styled_df = filtered_df1.style.format({
+    styled_df_time = df_time.style.format({
+        "YEAR": "{:.0f}",
+        "WEEK": "{:.0f}"
+    })
+    styled_df_quantity = df_quantity.style.format({
         "YEAR": "{:.0f}",
         "WEEK": "{:.0f}"
     })
 
-    # Utiliser styled_df pour l'affichage
-    st.dataframe(styled_df, hide_index=True, column_config=COLUMN_CONFIG)
+    st.markdown('**Partie "Temps"**')
+    st.dataframe(styled_df_time, hide_index=True, column_config=column_config_df_time)
+    st.markdown('**Partie "Quantité"**')
+    st.dataframe(styled_df_quantity, hide_index=True, column_config=column_config_df_quantity)
+
 
     # III. Section pour la modification des données
     st.write("---")
@@ -270,18 +291,33 @@ def main():
             assigned_studies = set(load_assigned_studies(arc))
             rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
-             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
+             'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
-
-    # IV. Afficher le DataFrame dans l'éditeur de données
+ 
     if not filtered_df2.empty:
-        filtered_df2['YEAR'] = filtered_df2['YEAR'].apply(lambda x: f"{x:.0f}")
-        filtered_df2['WEEK'] = filtered_df2['WEEK'].apply(lambda x: f"{x:.0f}")
-        df = st.data_editor(
-            data=filtered_df2,
+        filtered_df2['YEAR'] = filtered_df2['YEAR'].astype(str)
+        filtered_df2['WEEK'] = filtered_df2['WEEK'].astype(str)
+
+        # Séparer votre DataFrame en deux selon les clés spécifiées
+        df_time2 = filtered_df2[keys_df_time]
+        df_quantity2 = filtered_df2[keys_df_quantity]
+
+        # Afficher la première partie avec sa configuration de colonne
+        st.markdown('**Partie "Temps"**')
+        df1_edited = st.data_editor(
+            data=df_time2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=COLUMN_CONFIG
+            column_config=column_config_df_time  # Utilisez votre configuration de colonne spécifique ici
+        )
+
+        # Afficher la seconde partie avec sa configuration de colonne
+        st.markdown('**Partie "Quantité"**')
+        df2_edited = st.data_editor(
+            data=df_quantity2,
+            hide_index=True,
+            disabled=["YEAR", "WEEK", "STUDY"],
+            column_config=column_config_df_quantity  # Utilisez votre configuration de colonne spécifique ici
         )
 
     else:
@@ -292,6 +328,16 @@ def main():
 
         # Retirer les anciennes données de la semaine sélectionnée
         df_data = df_data[df_data['WEEK'] != int(selected_week)]
+
+        # Assurez-vous que 'YEAR', 'WEEK', 'STUDY' sont présents dans les deux DataFrames pour l'alignement
+        df1_edited = df1_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df2_edited = df2_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
+
+        # Concaténation des deux DataFrames sur l'axe des colonnes
+        df = pd.concat([df1_edited, df2_edited], axis=1)
+
+        # Réinitialiser l'indice si nécessaire
+        df.reset_index(inplace=True)
 
         # Concaténer avec les nouvelles données
         updated_df = pd.concat([df_data, df]).sort_index()

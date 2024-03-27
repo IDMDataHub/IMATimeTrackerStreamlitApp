@@ -19,7 +19,7 @@ BUCKET_NAME = "bucketidb"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 ANNEES = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
-'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'COMMENTAIRE']
+'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
 INT_CATEGORIES = CATEGORIES[3:-1]
 COLUMN_CONFIG = {
     'YEAR': {"label": 'Année', "description": "Année"},
@@ -38,6 +38,9 @@ COLUMN_CONFIG = {
     'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"},
     'CLOTURE': {"label": 'Clôture', "description": "Clôture"},
     'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"},
+    'NB_PAT_SCR': {"label": 'Nb Pat. Scr. .', "description": "Nombre de patients screenés"},
+    'NB_PAT_RAN': {"label": 'Nb Pat. Rand.', "description": "Nombre de patients randomisés"},
+    'NB_EOS': {"label": 'Nb EOS.', "description": "Nombre d'EOS"},
     'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"}
 }
 
@@ -255,16 +258,24 @@ def main():
     int_columns = INT_CATEGORIES
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
 
+    df_time = filtered_df1[keys_df_time]
+    df_quantity = filtered_df1[keys_df_quantity]
+    
     # Appliquer le style
-    styled_df = filtered_df1.style.format({
+    styled_df_time = df_time.style.format({
+        "YEAR": "{:.0f}",
+        "WEEK": "{:.0f}"
+    })
+    styled_df_quantity = df_quantity.style.format({
         "YEAR": "{:.0f}",
         "WEEK": "{:.0f}"
     })
 
-    # Utiliser styled_df pour l'affichage
+    st.markdown('**Partie "Temps"**')
+    st.dataframe(styled_df_time, hide_index=True, column_config=column_config_df_time)
+    st.markdown('**Partie "Quantité"**')
+    st.dataframe(styled_df_quantity, hide_index=True, column_config=column_config_df_quantity)
 
-
-    st.dataframe(styled_df, hide_index=True, column_config=COLUMN_CONFIG)
 
     # III. Section pour la modification des données
     st.write("---")
@@ -330,25 +341,51 @@ def main():
              'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
-
-    # IV. Afficher le DataFrame dans l'éditeur de données
     if not filtered_df2.empty:
-        filtered_df2['YEAR'] = filtered_df2['YEAR'].apply(lambda x: f"{x:.0f}")
-        filtered_df2['WEEK'] = filtered_df2['WEEK'].apply(lambda x: f"{x:.0f}")
-        df = st.data_editor(
-            data=filtered_df2,
+        filtered_df2['YEAR'] = filtered_df2['YEAR'].astype(str)
+        filtered_df2['WEEK'] = filtered_df2['WEEK'].astype(str)
+
+        # Séparer votre DataFrame en deux selon les clés spécifiées
+        df_time2 = filtered_df2[keys_df_time]
+        df_quantity2 = filtered_df2[keys_df_quantity]
+
+        # Afficher la première partie avec sa configuration de colonne
+        st.markdown('**Partie "Temps"**')
+        df1_edited = st.data_editor(
+            data=df_time2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=COLUMN_CONFIG)
+            column_config=column_config_df_time  # Utilisez votre configuration de colonne spécifique ici
+        )
+
+        # Afficher la seconde partie avec sa configuration de colonne
+        st.markdown('**Partie "Quantité"**')
+        df2_edited = st.data_editor(
+            data=df_quantity2,
+            hide_index=True,
+            disabled=["YEAR", "WEEK", "STUDY"],
+            column_config=column_config_df_quantity  # Utilisez votre configuration de colonne spécifique ici
+        )
 
     else:
         st.write("Aucune donnée disponible pour la semaine sélectionnée.")
+    
     
     # V. Bouton de sauvegarde
     if st.button("Sauvegarder"):
 
         # Retirer les anciennes données de la semaine sélectionnée
         df_data = df_data[df_data['WEEK'] != int(selected_week)]
+
+        # Assurez-vous que 'YEAR', 'WEEK', 'STUDY' sont présents dans les deux DataFrames pour l'alignement
+        df1_edited = df1_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df2_edited = df2_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
+
+        # Concaténation des deux DataFrames sur l'axe des colonnes
+        df = pd.concat([df1_edited, df2_edited], axis=1)
+
+        # Réinitialiser l'indice si nécessaire
+        df.reset_index(inplace=True)
 
         # Concaténer avec les nouvelles données
         updated_df = pd.concat([df_data, df]).sort_index()

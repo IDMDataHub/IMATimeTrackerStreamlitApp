@@ -24,8 +24,9 @@ ARC_INFO_FILE = "ARC_MDP.csv"
 STUDY_INFO_FILE = "STUDY.csv"
 ANNEES = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
-'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'COMMENTAIRE']
+'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
 INT_CATEGORIES = CATEGORIES[3:-1]
+TIME_INT_CAT = CATEGORIES[3:-5]
 MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 SHAPE_BOX = {
     "ha": 'center', 
@@ -40,10 +41,10 @@ SHAPE_BOX = {
 #####################################################################
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
-viridis_palette = sns.color_palette("viridis", len(INT_CATEGORIES))
+viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
 
 # Mapping des catégories aux couleurs de la palette "viridis"
-category_colors = {category: color for category, color in zip(INT_CATEGORIES, viridis_palette)}
+category_colors = {category: color for category, color in zip(TIME_INT_CAT, viridis_palette)}
 
 # Chargement des mots de passe ARC
 def load_arc_passwords():
@@ -110,7 +111,7 @@ def save_data(file_name, df):
 # ========================================================================================================================================
 # GRAPH ET AFFICHAGE
 
-def create_bar_chart(data, title, week_or_month):
+def create_bar_chart(data, title, week_or_month, y='Total Time'):
     """Crée un graphique en barres pour les données fournies avec des couleurs cohérentes."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
@@ -122,7 +123,7 @@ def create_bar_chart(data, title, week_or_month):
     color_mapping = dict(zip(category_order, color_palette))
 
     # Création du graphique en barres avec l'ordre des couleurs défini
-    sns.barplot(x=data.index, y='Total Time', data=data, ax=ax, palette=color_mapping)
+    sns.barplot(x=data.index, y=y, data=data, ax=ax, palette=color_mapping)
     ax.set_title(f'{title} pour {week_or_month}')
     ax.set_xlabel('')
     ax.set_ylabel('Heures')
@@ -153,7 +154,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
 
         for i, study in enumerate(studies):
             df_study = df[df['STUDY'] == study]
-            df_study_sum = df_study[INT_CATEGORIES].fillna(0).sum()
+            df_study_sum = df_study[TIME_INT_CAT].fillna(0).sum()
             df_study_sum = df_study_sum[df_study_sum > 0]
 
             if df_study_sum.sum() > 0:
@@ -173,7 +174,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
         st.warning("Aucune étude sélectionnée ou aucune donnée disponible pour les études sélectionnées.")
 
 def process_and_display_data(df, period_label, period_value):
-    df_activities = df.groupby('STUDY')[INT_CATEGORIES].sum()
+    df_activities = df.groupby('STUDY')[TIME_INT_CAT].sum()
     df_activities['Total Time'] = df_activities.sum(axis=1)
     df_activities_sorted = df_activities.sort_values('Total Time', ascending=False)
     create_bar_chart(df_activities_sorted, f'Heures Passées par Étude', f'{period_label} {period_value}')
@@ -279,13 +280,14 @@ def delete_row(df, row_to_delete, file_name):
 # Fonction principale de l'application Streamlit
 def main():
     try:
-            st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
+        st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
     except:
         pass
     st.title("I-Motion Adulte - Espace Chefs de Projets")
+    st.write("---")
 
     # Onglet de sélection
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - ARCs", "📉 Dashboard - Etudes", "📊 Dashboard - Général",  "📁 Archives - Etudes"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARCs", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etudes", "📊 Dashboard - toutes Etudes"])
 
 # ----------------------------------------------------------------------------------------------------------
     with tab1:
@@ -386,7 +388,7 @@ def main():
                                     (df_data['WEEK'] <= end_week)]
 
         # Convertir certaines colonnes en entiers pour les deux tableaux
-        int_columns = INT_CATEGORIES
+        int_columns = TIME_INT_CAT
         filtered_week_df[int_columns] = filtered_week_df[int_columns].astype(int)
         filtered_month_df[int_columns] = filtered_month_df[int_columns].astype(int)
 
@@ -421,6 +423,129 @@ def main():
 
 # ----------------------------------------------------------------------------------------------------------
     with tab4:
+        arcs = list(ARC_PASSWORDS.keys())
+
+        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+
+        # Utiliser current_year au lieu de 2024 directement
+        last_5_weeks = [(current_week - i) % 52 or 52 for i in range(1, 6)]
+        all_weeks_current_year = np.arange(1, 53)  # Toutes les semaines pour l'année courante
+        dfs = {}  # Pour stocker les DataFrames
+
+        for arc in arcs:
+            df_arc = load_data(DATA_FOLDER, arc)
+            if df_arc is not None:
+                df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
+                df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
+                
+                # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
+                df_all_last_5_weeks = pd.DataFrame({'YEAR': current_year, 'WEEK': last_5_weeks, 'Total Time': 0}).merge(
+                    df_arc[(df_arc['YEAR'] == current_year) & (df_arc['WEEK'].isin(last_5_weeks))],
+                    on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
+                df_all_last_5_weeks['Total Time'] = df_all_last_5_weeks[['Total Time', 'Total Time_y']].max(axis=1)
+                df_all_last_5_weeks.drop(columns=['Total Time_y'], inplace=True)
+                
+                # Préparer un DataFrame pour toutes les semaines de l'année courante avec des valeurs par défaut à 0
+                df_all_current_year = pd.DataFrame({'YEAR': current_year, 'WEEK': all_weeks_current_year, 'Total Time': 0}).merge(
+                    df_arc[df_arc['YEAR'] == current_year],
+                    on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
+                df_all_current_year['Total Time'] = df_all_current_year[['Total Time', 'Total Time_y']].max(axis=1)
+                df_all_current_year.drop(columns=['Total Time_y'], inplace=True)
+                
+                dfs[arc] = {'last_5_weeks': df_all_last_5_weeks, 'current_year': df_all_current_year}
+            else:
+                st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
+
+        col_month, col_year = st.columns(2)
+        
+        # Pour le graphique des 5 dernières semaines
+        with col_month:
+            generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire", mode='last_5_weeks')
+
+                # Pour le graphique de l'année en cours
+        with col_year:
+            generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
+
+# ----------------------------------------------------------------------------------------------------------
+    with tab5:
+        # Sélection d'une étude
+        study_names = load_all_study_names(DATA_FOLDER)
+        study_choice = st.selectbox("Choisissez votre étude", study_names)
+
+        # Chargement et combinaison des données de tous les ARCs
+        all_arcs_df = pd.DataFrame()
+        for arc in ARC_PASSWORDS.keys():
+            df_arc = load_data(DATA_FOLDER, arc)
+            if df_arc is not None:
+                df_arc['ARC'] = arc
+                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+
+        # Filtrage des données par étude sélectionnée
+        filtered_df_by_study = all_arcs_df[all_arcs_df['STUDY'] == study_choice]
+
+        # Assurez-vous que les colonnes d'intérêt sont de type numérique pour le calcul
+        filtered_df_by_study[TIME_INT_CAT] = filtered_df_by_study[TIME_INT_CAT].apply(pd.to_numeric, errors='coerce')
+
+        # Calculer le temps total passé par catégorie d'activité pour l'étude sélectionnée
+        total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
+
+
+        # Utilisation de st.columns pour diviser l'espace d'affichage
+        col_table, espace, col_graph = st.columns([1.5, 0.2, 2])
+
+        with col_table:
+            st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
+            
+            # Commencer par un header de Markdown pour le tableau
+            markdown_table = "Catégorie | Heures passées\n:- | -:\n"
+            
+            # Ajouter chaque catégorie et le temps correspondant dans le format Markdown
+            for category, hours in total_time_by_category.items():
+                markdown_table += f"{category} | {hours:}\n"
+            
+            # Afficher le tableau formaté en Markdown
+            st.markdown(markdown_table)
+
+        with col_graph:
+            # Préparation et affichage du graphique en camembert dans la deuxième colonne
+            fig, ax = plt.subplots()
+            # Assurez-vous que total_time_by_category est défini avant cette ligne
+            total_time_by_category = total_time_by_category[total_time_by_category > 0]
+            if total_time_by_category.sum() > 0:
+                plot_pie_chart_on_ax(total_time_by_category, f"Répartition du temps par catégorie pour l'étude {study_choice}", ax)
+            else:
+                ax.text(0.5, 0.5, f"Aucune donnée disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes)  # Correction de la référence à la variable de choix d'étude et positionnement
+                ax.set_axis_off()  # Masquer les axes s'il n'y a pas de données
+            st.pyplot(fig)
+            
+        st.write("---")
+        col_arc, col_scr, col_rand= st.columns([1, 1, 1])
+
+        with col_arc:
+            st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
+            
+            # Grouper les données par ARC et calculer le total
+            total_time_by_arc = filtered_df_by_study.groupby('ARC')[TIME_INT_CAT].sum().sum(axis=1)
+            
+            # Vérifier si le DataFrame n'est pas vide
+            if not total_time_by_arc.empty:
+                # Option 1: Afficher sous forme de tableau avec Markdown
+                markdown_table = "ARC | Heures Totales\n:- | -:\n"
+                for arc, total_hours in total_time_by_arc.items():
+                    markdown_table += f"{arc} | {total_hours:.2f}\n"
+                st.markdown(markdown_table)
+            else:
+                st.write("Aucune donnée disponible pour cette étude.")
+        with col_scr:
+            screened_pat = int(filtered_df_by_study['NB_PAT_SCR'].sum())
+            st.metric(label="Nombre total de patients inclus", value=screened_pat)
+
+        with col_rand:
+            rando_pat = int(filtered_df_by_study['NB_PAT_RAN'].sum())
+            st.metric(label="Nombre total de patients randomisés", value=rando_pat)
+
+# ----------------------------------------------------------------------------------------------------------
+    with tab6:
         study_df = load_study_info()
         month_names = MONTHS
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
@@ -454,125 +579,30 @@ def main():
         df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
         df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
         df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
-        col_graph, espace = st.columns([3, 3])
-        with col_graph:
-                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
 
-# ----------------------------------------------------------------------------------------------------------
-    with tab5:
-        arcs = list(ARC_PASSWORDS.keys())
+        filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
+        df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
 
-        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
-
-        # Utiliser current_year au lieu de 2024 directement
-        last_5_weeks = [(current_week - i) % 52 or 52 for i in range(1, 6)]
-        all_weeks_current_year = np.arange(1, 53)  # Toutes les semaines pour l'année courante
-        dfs = {}  # Pour stocker les DataFrames
-
-        for arc in arcs:
-            df_arc = load_data(DATA_FOLDER, arc)
-            if df_arc is not None:
-                df_arc['Total Time'] = df_arc[INT_CATEGORIES].sum(axis=1)
-                df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
-                
-                # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
-                df_all_last_5_weeks = pd.DataFrame({'YEAR': current_year, 'WEEK': last_5_weeks, 'Total Time': 0}).merge(
-                    df_arc[(df_arc['YEAR'] == current_year) & (df_arc['WEEK'].isin(last_5_weeks))],
-                    on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
-                df_all_last_5_weeks['Total Time'] = df_all_last_5_weeks[['Total Time', 'Total Time_y']].max(axis=1)
-                df_all_last_5_weeks.drop(columns=['Total Time_y'], inplace=True)
-                
-                # Préparer un DataFrame pour toutes les semaines de l'année courante avec des valeurs par défaut à 0
-                df_all_current_year = pd.DataFrame({'YEAR': current_year, 'WEEK': all_weeks_current_year, 'Total Time': 0}).merge(
-                    df_arc[df_arc['YEAR'] == current_year],
-                    on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
-                df_all_current_year['Total Time'] = df_all_current_year[['Total Time', 'Total Time_y']].max(axis=1)
-                df_all_current_year.drop(columns=['Total Time_y'], inplace=True)
-                
-                dfs[arc] = {'last_5_weeks': df_all_last_5_weeks, 'current_year': df_all_current_year}
-            else:
-                st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
-
-        col_month, col_year = st.columns(2)
+        col_graph1, col_graph2 = st.columns([3, 3])
+        with col_graph1:
+            create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+        with col_graph2:
+            df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
+            create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
         
-        # Pour le graphique des 5 dernières semaines
-        with col_month:
-            generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire", mode='last_5_weeks')
+        metrics_month, metrics_year, metrics_suivi = st.columns([3, 3, 3])
+        with metrics_month: 
+            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+            st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
 
-                # Pour le graphique de l'année en cours
-        with col_year:
-            generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
+        with metrics_year:
+            nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
+            st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
 
-
-# ----------------------------------------------------------------------------------------------------------
-    with tab6:
-        # Sélection d'une étude
-        study_names = load_all_study_names(DATA_FOLDER)
-        study_choice = st.selectbox("Choisissez votre étude", study_names)
-
-        # Chargement et combinaison des données de tous les ARCs
-        all_arcs_df = pd.DataFrame()
-        for arc in ARC_PASSWORDS.keys():
-            df_arc = load_data(DATA_FOLDER, arc)
-            if df_arc is not None:
-                df_arc['ARC'] = arc
-                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
-
-        # Filtrage des données par étude sélectionnée
-        filtered_df_by_study = all_arcs_df[all_arcs_df['STUDY'] == study_choice]
-
-        # Assurez-vous que les colonnes d'intérêt sont de type numérique pour le calcul
-        filtered_df_by_study[INT_CATEGORIES] = filtered_df_by_study[INT_CATEGORIES].apply(pd.to_numeric, errors='coerce')
-
-        # Calculer le temps total passé par catégorie d'activité pour l'étude sélectionnée
-        total_time_by_category = filtered_df_by_study[INT_CATEGORIES].sum()
-
-
-        # Utilisation de st.columns pour diviser l'espace d'affichage
-        col_table, col_graph, espace, col_arc = st.columns([1, 1, 0.2, 1])
-
-        with col_table:
-            st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
-            
-            # Commencer par un header de Markdown pour le tableau
-            markdown_table = "Catégorie | Heures passées\n:- | -:\n"
-            
-            # Ajouter chaque catégorie et le temps correspondant dans le format Markdown
-            for category, hours in total_time_by_category.items():
-                markdown_table += f"{category} | {hours:}\n"
-            
-            # Afficher le tableau formaté en Markdown
-            st.markdown(markdown_table)
-
-
-        with col_graph:
-            # Préparation et affichage du graphique en camembert dans la deuxième colonne
-            fig, ax = plt.subplots()
-            # Assurez-vous que total_time_by_category est défini avant cette ligne
-            total_time_by_category = total_time_by_category[total_time_by_category > 0]
-            if total_time_by_category.sum() > 0:
-                plot_pie_chart_on_ax(total_time_by_category, f"Répartition du temps par catégorie pour l'étude {study_choice}", ax)
-            else:
-                ax.text(0.5, 0.5, f"Aucune donnée disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes)  # Correction de la référence à la variable de choix d'étude et positionnement
-                ax.set_axis_off()  # Masquer les axes s'il n'y a pas de données
-            st.pyplot(fig)
-            
-        with col_arc:
-            st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
-            
-            # Grouper les données par ARC et calculer le total
-            total_time_by_arc = filtered_df_by_study.groupby('ARC')[INT_CATEGORIES].sum().sum(axis=1)
-            
-            # Vérifier si le DataFrame n'est pas vide
-            if not total_time_by_arc.empty:
-                # Option 1: Afficher sous forme de tableau avec Markdown
-                markdown_table = "ARC | Heures Totales\n:- | -:\n"
-                for arc, total_hours in total_time_by_arc.items():
-                    markdown_table += f"{arc} | {total_hours:.2f}\n"
-                st.markdown(markdown_table)
-            else:
-                st.write("Aucune donnée disponible pour cette étude.")
-
+        with metrics_suivi:
+            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+            nb_eos = int(df_patient_included_month['NB_EOS'].sum())
+            st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
