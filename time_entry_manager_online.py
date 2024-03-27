@@ -391,7 +391,8 @@ def main():
                 #study_df = add_row_to_df(study_df, STUDY_INFO_FILE)
                 study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
                 st.success("Nouvelle Étude ajoutée.")
-
+                st.rerun()
+                
         with col_suppr:
             st.markdown("#### Suppression d'une étude")
             study_options = study_df['STUDY'].dropna().astype(str).tolist()
@@ -400,6 +401,7 @@ def main():
                 # study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
                 study_df = delete_row_s3(BUCKET_NAME, study_df[study_df['STUDY'] == study_to_delete].index, study_df)
                 st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
+                st.rerun()
 
         with col_modif:
             st.markdown("#### Affectation des études")
