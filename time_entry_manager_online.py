@@ -47,13 +47,13 @@ s3_client = boto3.client(
     aws_secret_access_key=st.secrets['AWS_SECRET_ACCESS_KEY']
 )
 
-def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8', datatype=int):
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     body = obj['Body'].read().decode(encoding)
     
     # Utilisez pandas pour lire le CSV
-    data = pd.read_csv(StringIO(body), sep=sep, dtype=datatype)
+    data = pd.read_csv(StringIO(body), sep=sep)
     return data
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
