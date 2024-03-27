@@ -336,13 +336,14 @@ def delete_row_s3(bucket_name, file_name, df, row_to_delete):
 # Fonction principale de l'application Streamlit
 def main():
     try:
-            st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
+        st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
     except:
         pass
     st.title("I-Motion Adulte - Espace Chefs de Projets")
+    st.write("---")
 
     # Onglet de sélection
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - ARCs", "📉 Dashboard - Etudes", "📊 Dashboard - Général",  "📁 Archives - Etudes"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARCs", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etudes", "📊 Dashboard - toutes Etudes"])
 
 # ----------------------------------------------------------------------------------------------------------
     with tab1:
@@ -409,7 +410,7 @@ def main():
             year_choice = st.selectbox("Année", ANNEES, key=3, index=ANNEES.index(datetime.datetime.now().year))
 
         # I. Chargement des données
-        df_data = load_data(DATA_FOLDER, arc)
+        df_data = load_data(arc)
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
         associated_studies = df_data['STUDY'].unique().tolist()
@@ -443,7 +444,7 @@ def main():
                                     (df_data['WEEK'] <= end_week)]
 
         # Convertir certaines colonnes en entiers pour les deux tableaux
-        int_columns = INT_CATEGORIES
+        int_columns = TIME_INT_CAT
         filtered_week_df[int_columns] = filtered_week_df[int_columns].astype(int)
         filtered_month_df[int_columns] = filtered_month_df[int_columns].astype(int)
 
@@ -478,45 +479,6 @@ def main():
 
 # ----------------------------------------------------------------------------------------------------------
     with tab4:
-        study_df = load_study_info()
-        month_names = MONTHS
-        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
-
-        col_year, col_month, espace = st.columns([1, 3, 3])
-        with col_year:
-            year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
-        with col_month:
-            # Assurez-vous que le choix du mois utilise une clé différente
-            selected_month_name = st.select_slider("Mois", options=month_names, 
-                            value=month_names[current_month - 1], key=16)
-            # Convertir le nom du mois sélectionné en numéro
-            month_choice = month_names.index(selected_month_name) + 1
-
-        all_arcs_df = pd.DataFrame()
-        for arc in ARC_PASSWORDS.keys():
-            df_arc = load_data(DATA_FOLDER, arc)
-            if df_arc is not None:
-                df_arc['ARC'] = arc
-                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
-
-        # Filtrage des données pour le tableau du mois
-        first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
-        last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
-        start_week = first_day_of_month.isocalendar()[1]
-        end_week = last_day_of_month.isocalendar()[1]
-        filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
-                                    (all_arcs_df['WEEK'] >= start_week) & 
-                                    (all_arcs_df['WEEK'] <= end_week)]
-
-        df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
-        df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
-        df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
-        col_graph, espace = st.columns([3, 3])
-        with col_graph:
-                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
-
-# ----------------------------------------------------------------------------------------------------------
-    with tab5:
         arcs = list(ARC_PASSWORDS.keys())
 
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
@@ -527,9 +489,9 @@ def main():
         dfs = {}  # Pour stocker les DataFrames
 
         for arc in arcs:
-            df_arc = load_data(DATA_FOLDER, arc)
+            df_arc = load_data(arc)
             if df_arc is not None:
-                df_arc['Total Time'] = df_arc[INT_CATEGORIES].sum(axis=1)
+                df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
                 df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
                 
                 # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
@@ -560,9 +522,8 @@ def main():
         with col_year:
             generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
 
-
 # ----------------------------------------------------------------------------------------------------------
-    with tab6:
+    with tab5:
         # Sélection d'une étude
         study_names = load_all_study_names(DATA_FOLDER)
         study_choice = st.selectbox("Choisissez votre étude", study_names)
@@ -570,7 +531,7 @@ def main():
         # Chargement et combinaison des données de tous les ARCs
         all_arcs_df = pd.DataFrame()
         for arc in ARC_PASSWORDS.keys():
-            df_arc = load_data(DATA_FOLDER, arc)
+            df_arc = load_data(arc)
             if df_arc is not None:
                 df_arc['ARC'] = arc
                 all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
@@ -579,14 +540,14 @@ def main():
         filtered_df_by_study = all_arcs_df[all_arcs_df['STUDY'] == study_choice]
 
         # Assurez-vous que les colonnes d'intérêt sont de type numérique pour le calcul
-        filtered_df_by_study[INT_CATEGORIES] = filtered_df_by_study[INT_CATEGORIES].apply(pd.to_numeric, errors='coerce')
+        filtered_df_by_study[TIME_INT_CAT] = filtered_df_by_study[TIME_INT_CAT].apply(pd.to_numeric, errors='coerce')
 
         # Calculer le temps total passé par catégorie d'activité pour l'étude sélectionnée
-        total_time_by_category = filtered_df_by_study[INT_CATEGORIES].sum()
+        total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
 
 
         # Utilisation de st.columns pour diviser l'espace d'affichage
-        col_table, col_graph, espace, col_arc = st.columns([1, 1, 0.2, 1])
+        col_table, espace, col_graph = st.columns([1.5, 0.2, 2])
 
         with col_table:
             st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
@@ -601,7 +562,6 @@ def main():
             # Afficher le tableau formaté en Markdown
             st.markdown(markdown_table)
 
-
         with col_graph:
             # Préparation et affichage du graphique en camembert dans la deuxième colonne
             fig, ax = plt.subplots()
@@ -614,11 +574,14 @@ def main():
                 ax.set_axis_off()  # Masquer les axes s'il n'y a pas de données
             st.pyplot(fig)
             
+        st.write("---")
+        col_arc, col_scr, col_rand= st.columns([1, 1, 1])
+
         with col_arc:
             st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
             
             # Grouper les données par ARC et calculer le total
-            total_time_by_arc = filtered_df_by_study.groupby('ARC')[INT_CATEGORIES].sum().sum(axis=1)
+            total_time_by_arc = filtered_df_by_study.groupby('ARC')[TIME_INT_CAT].sum().sum(axis=1)
             
             # Vérifier si le DataFrame n'est pas vide
             if not total_time_by_arc.empty:
@@ -629,7 +592,73 @@ def main():
                 st.markdown(markdown_table)
             else:
                 st.write("Aucune donnée disponible pour cette étude.")
+        with col_scr:
+            screened_pat = int(filtered_df_by_study['NB_PAT_SCR'].sum())
+            st.metric(label="Nombre total de patients inclus", value=screened_pat)
 
+        with col_rand:
+            rando_pat = int(filtered_df_by_study['NB_PAT_RAN'].sum())
+            st.metric(label="Nombre total de patients randomisés", value=rando_pat)
+
+# ----------------------------------------------------------------------------------------------------------
+    with tab6:
+        study_df = load_study_info()
+        month_names = MONTHS
+        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+
+        col_year, col_month, espace = st.columns([1, 3, 3])
+        with col_year:
+            year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
+        with col_month:
+            # Assurez-vous que le choix du mois utilise une clé différente
+            selected_month_name = st.select_slider("Mois", options=month_names, 
+                            value=month_names[current_month - 1], key=16)
+            # Convertir le nom du mois sélectionné en numéro
+            month_choice = month_names.index(selected_month_name) + 1
+
+        all_arcs_df = pd.DataFrame()
+        for arc in ARC_PASSWORDS.keys():
+            df_arc = load_data(arc)
+            if df_arc is not None:
+                df_arc['ARC'] = arc
+                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+
+        # Filtrage des données pour le tableau du mois
+        first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
+        last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
+        start_week = first_day_of_month.isocalendar()[1]
+        end_week = last_day_of_month.isocalendar()[1]
+        filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
+                                    (all_arcs_df['WEEK'] >= start_week) & 
+                                    (all_arcs_df['WEEK'] <= end_week)]
+
+        df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
+        df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
+        df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
+
+        filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
+        df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
+
+        col_graph1, col_graph2 = st.columns([3, 3])
+        with col_graph1:
+            create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+        with col_graph2:
+            df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
+            create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
+        
+        metrics_month, metrics_year, metrics_suivi = st.columns([3, 3, 3])
+        with metrics_month: 
+            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+            st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
+
+        with metrics_year:
+            nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
+            st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
+
+        with metrics_suivi:
+            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+            nb_eos = int(df_patient_included_month['NB_EOS'].sum())
+            st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #

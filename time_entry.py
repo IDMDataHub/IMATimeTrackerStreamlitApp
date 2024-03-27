@@ -195,41 +195,7 @@ def main():
     df_data = load_data(DATA_FOLDER, arc)
     two_weeks_ago, previous_week, current_week, next_week, current_year = calculate_weeks()
 
-    # II. Interface utilisateur pour la sélection de l'année et de la semaine
-    st.subheader("Visualisation")
-    col1, col2 = st.columns([1, 3])
-    with col1:
-        year_choice = st.selectbox("Année", ANNEES, index=ANNEES.index(datetime.datetime.now().year))
-    with col2:
-        week_choice = st.slider("Semaine", 1, 52, current_week)
-
-    # Filtrage et manipulation des données
-    filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
-
-    # Convertir certaines colonnes en entiers
-    int_columns = INT_CATEGORIES
-    filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
-
-    df_time = filtered_df1[keys_df_time]
-    df_quantity = filtered_df1[keys_df_quantity]
-    
-    # Appliquer le style
-    styled_df_time = df_time.style.format({
-        "YEAR": "{:.0f}",
-        "WEEK": "{:.0f}"
-    })
-    styled_df_quantity = df_quantity.style.format({
-        "YEAR": "{:.0f}",
-        "WEEK": "{:.0f}"
-    })
-
-    st.markdown('**Partie "Temps"**')
-    st.dataframe(styled_df_time, hide_index=True, column_config=column_config_df_time)
-    st.markdown('**Partie "Quantité"**')
-    st.dataframe(styled_df_quantity, hide_index=True, column_config=column_config_df_quantity)
-
-
-    # III. Section pour la modification des données
+    # II. Section pour la modification des données
     st.write("---")
     st.subheader("Entrée d'heures")
     
@@ -323,7 +289,7 @@ def main():
     else:
         st.write("Aucune donnée disponible pour la semaine sélectionnée.")
     
-    # V. Bouton de sauvegarde
+    # III. Bouton de sauvegarde
     if st.button("Sauvegarder"):
 
         # Retirer les anciennes données de la semaine sélectionnée
@@ -352,6 +318,39 @@ def main():
 
         # Recharger la page
         st.rerun()
+
+    # IV. Interface utilisateur pour la sélection de l'année et de la semaine
+    st.subheader("Visualisation de l'historique")
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        year_choice = st.selectbox("Année", ANNEES, index=ANNEES.index(datetime.datetime.now().year))
+    with col2:
+        week_choice = st.slider("Semaine", 1, 52, current_week)
+
+    # Filtrage et manipulation des données
+    filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
+
+    # Convertir certaines colonnes en entiers
+    int_columns = INT_CATEGORIES
+    filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
+
+    df_time = filtered_df1[keys_df_time]
+    df_quantity = filtered_df1[keys_df_quantity]
+    
+    # Appliquer le style
+    styled_df_time = df_time.style.format({
+        "YEAR": "{:.0f}",
+        "WEEK": "{:.0f}"
+    })
+    styled_df_quantity = df_quantity.style.format({
+        "YEAR": "{:.0f}",
+        "WEEK": "{:.0f}"
+    })
+
+    st.markdown('**Partie "Temps"**')
+    st.dataframe(styled_df_time, hide_index=True, column_config=column_config_df_time)
+    st.markdown('**Partie "Quantité"**')
+    st.dataframe(styled_df_quantity, hide_index=True, column_config=column_config_df_quantity)
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
