@@ -453,6 +453,8 @@ def main():
         st.write(year_choice)
         st.write(start_week)
         st.write(end_week)
+        st.write(df_data['YEAR'])
+        st.write(df_data['WEEK'])
         filtered_month_df = df_data[(df_data['YEAR'] == year_choice) & 
                                     (df_data['WEEK'] >= start_week) & 
                                     (df_data['WEEK'] <= end_week)]
