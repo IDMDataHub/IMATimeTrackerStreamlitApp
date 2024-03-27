@@ -499,7 +499,6 @@ def main():
         dfs = {}  # Pour stocker les DataFrames
 
         for arc in arcs:
-            st.write(arc)
             if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
                 df_arc = load_data(arc)
                 df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
@@ -639,6 +638,10 @@ def main():
         last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
         start_week = first_day_of_month.isocalendar()[1]
         end_week = last_day_of_month.isocalendar()[1]
+        st.write(all_arcs_df)
+        st.write(year_choice)
+        st.write(start_week)
+        st.write(end_week)
         filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
                                     (all_arcs_df['WEEK'] >= start_week) & 
                                     (all_arcs_df['WEEK'] <= end_week)]
