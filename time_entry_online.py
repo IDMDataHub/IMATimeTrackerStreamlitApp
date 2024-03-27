@@ -180,7 +180,7 @@ def check_create_weekly_file(arc, year, week):
         # Préparation des nouvelles lignes à ajouter uniquement pour les nouvelles études
         rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
-             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in new_studies]
+             'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in new_studies]
         if rows:  # S'il y a de nouvelles études à ajouter
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
             # Sauvegarde du DataFrame mis à jour sur S3
@@ -314,7 +314,7 @@ def main():
             assigned_studies = set(load_assigned_studies(arc))
             rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
-             'NB_VISITE': 0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
+             'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
 
     if not filtered_df2.empty:
