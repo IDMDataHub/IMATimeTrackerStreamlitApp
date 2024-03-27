@@ -646,7 +646,7 @@ def main():
                                     (all_arcs_df['WEEK'] >= start_week) & 
                                     (all_arcs_df['WEEK'] <= end_week)]
 
-        df_activities_month = filtered_month_df.groupby('STUDY')[int_columns].sum()
+        df_activities_month = filtered_month_df.groupby('STUDY')[TIME_INT_CAT].sum()
         df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
         df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
 
