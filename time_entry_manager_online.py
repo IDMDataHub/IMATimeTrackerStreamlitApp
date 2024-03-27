@@ -307,8 +307,6 @@ def create_time_files_for_arcs(df):
         # Envoi du contenu CSV au fichier dans S3
         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
-
-
 def create_ongoing_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
         file_name = f"Ongoing_{arc_name}.csv"
