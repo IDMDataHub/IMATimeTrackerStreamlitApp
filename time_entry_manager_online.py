@@ -307,40 +307,23 @@ def create_time_files_for_arcs(df):
                 pass
 
 
-# def create_ongoing_files_for_arcs(df):
-#     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
-#         file_name = f"Ongoing_{arc_name}.csv"
-#         # La vérification de l'existence du fichier n'est pas nécessaire pour la création basique
-#         # car écrire sur S3 créera le fichier s'il n'existe pas déjà
-        
-#         # Création d'un nouveau DataFrame vide avec les colonnes spécifiées
-#         new_df = pd.DataFrame(columns=CATEGORIES)
-        
-#         # Convertir le DataFrame en chaîne CSV
-#         csv_buffer = StringIO()
-#         new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-#         csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
-        
-#         # Envoyer le contenu CSV au fichier dans S3
-#         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
-
 def create_ongoing_files_for_arcs(df):
-    for arc_name in df['ARC'].dropna().unique():
+    for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
         file_name = f"Ongoing_{arc_name}.csv"
+        # La vérification de l'existence du fichier n'est pas nécessaire pour la création basique
+        # car écrire sur S3 créera le fichier s'il n'existe pas déjà
         
-        try:
-            # Tentative de vérification de l'existence du fichier sur S3
-            s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
-        except ClientError as e:
-            error_code = e.response['Error']['Code']
-            if error_code == '404' or error_code == 'NoSuchKey':
-                # Le fichier n'existe pas, donc vous pouvez le créer.
-                new_df = pd.DataFrame(columns=CATEGORIES)
-                csv_buffer = StringIO()
-                new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-                csv_buffer.seek(0)
-                
-                s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+        # Création d'un nouveau DataFrame vide avec les colonnes spécifiées
+        new_df = pd.DataFrame(columns=CATEGORIES)
+        
+        # Convertir le DataFrame en chaîne CSV
+        csv_buffer = StringIO()
+        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+        
+        # Envoyer le contenu CSV au fichier dans S3
+        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+
 
 # Fonction pour ajouter une ligne à un DataFrame
 def add_row_to_df_s3(bucket_name, file_name, df):
