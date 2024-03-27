@@ -476,7 +476,7 @@ def main():
      
         # Répéter la même structure pour le mois dans la colonne de droite
         with col_month:
-            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "mois")
+            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "")
 
 # ----------------------------------------------------------------------------------------------------------
     with tab4:
