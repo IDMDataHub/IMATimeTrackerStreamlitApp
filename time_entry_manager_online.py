@@ -181,7 +181,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
             df_study_sum = df_study_sum[df_study_sum > 0]
 
             if df_study_sum.sum() > 0:
-                plot_pie_chart_on_ax(df_study_sum, f'Temps par Tâche pour {study} ({period_label} {period})', axs[i])
+                plot_pie_chart_on_ax(df_study_sum, f'Temps par Tâche pour {study}', axs[i])
             else:
                 # Ajouter le texte avec un cadre arrondi
                 axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {study}", **SHAPE_BOX)

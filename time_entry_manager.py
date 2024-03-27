@@ -145,7 +145,7 @@ def plot_pie_chart_on_ax(df_study_sum, titre, ax):
     ax.set_title(titre)
 
 def generate_charts_for_time_period(df, studies, period, period_label):
-    st.write(f"Graphiques pour la période sélectionnée")
+    st.write(f"Graphiques pour {period_label} {period}")
     
     if len(studies) > 0:
         nrows = (len(studies) + 1) // 2 if len(studies) % 2 else len(studies) // 2
@@ -158,7 +158,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
             df_study_sum = df_study_sum[df_study_sum > 0]
 
             if df_study_sum.sum() > 0:
-                plot_pie_chart_on_ax(df_study_sum, f'Temps par Tâche pour {study} ({period_label} {period})', axs[i])
+                plot_pie_chart_on_ax(df_study_sum, f'Temps par Tâche pour {study}', axs[i])
             else:
                 # Ajouter le texte avec un cadre arrondi
                 axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {study}", **SHAPE_BOX)
@@ -415,11 +415,11 @@ def main():
 
         # Générer les graphiques pour la semaine dans la colonne de gauche
         with col_week:
-            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "semaine")
+            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "la semaine")
      
         # Répéter la même structure pour le mois dans la colonne de droite
         with col_month:
-            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "mois")
+            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "")
 
 # ----------------------------------------------------------------------------------------------------------
     with tab4:
