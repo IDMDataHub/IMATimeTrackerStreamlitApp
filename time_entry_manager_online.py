@@ -415,7 +415,6 @@ def main():
 
         # I. Chargement des données
         df_data = load_data(arc)
-        st.write(arc)
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
         associated_studies = df_data['STUDY'].unique().tolist()
@@ -495,8 +494,8 @@ def main():
 
         for arc in arcs:
             st.write(arc)
-            df_arc = load_data(arc)
-            if df_arc is not None:
+            if arc is not None:
+                df_arc = load_data(arc)
                 df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
                 df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
                 
