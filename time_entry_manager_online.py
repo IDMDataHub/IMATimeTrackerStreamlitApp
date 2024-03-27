@@ -359,7 +359,6 @@ def main():
         with col_ajout:
             st.markdown("#### Ajout d'un nouvel ARC")
             if st.button("Ajouter un ARC"):
-                # arc_df = add_row_to_df(arc_df, ARC_INFO_FILE)
                 arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
                 st.success("Nouvel ARC ajouté.")
 
@@ -368,15 +367,13 @@ def main():
             arc_options = arc_df['ARC'].dropna().astype(str).tolist()
             arc_to_delete = st.selectbox("Choisir un ARC à supprimer", sorted(arc_options))
             if st.button("Archiver l'ARC sélectionné"):
-                # arc_df = delete_row(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index, ARC_INFO_FILE)
-                arc_df = delete_row_s3(BUCKET_NAME, ARC_INFO_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
+                arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
                 st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
 
         with col_modif:
             st.markdown("#### Gestion des mots de passes")
             updated_arc_df = st.data_editor(data=arc_df, hide_index=True)
             if st.button("Sauvegarder les modifications"):
-                # save_data(ARC_INFO_FILE, updated_arc_df)
                 save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, updated_arc_df)
                 create_time_files_for_arcs(updated_arc_df)
                 create_ongoing_files_for_arcs(updated_arc_df) 
