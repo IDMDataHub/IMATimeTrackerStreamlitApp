@@ -56,10 +56,10 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     return data
 
 # Création d'une palette "viridis" avec le nombre approprié de couleurs
-viridis_palette = sns.color_palette("viridis", len(INT_CATEGORIES))
+viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
 
 # Mapping des catégories aux couleurs de la palette "viridis"
-category_colors = {category: color for category, color in zip(INT_CATEGORIES, viridis_palette)}
+category_colors = {category: color for category, color in zip(TIME_INT_CAT, viridis_palette)}
 
 def load_arc_passwords():
     try:
@@ -177,7 +177,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
 
         for i, study in enumerate(studies):
             df_study = df[df['STUDY'] == study]
-            df_study_sum = df_study[INT_CATEGORIES].fillna(0).sum()
+            df_study_sum = df_study[TIME_INT_CAT].fillna(0).sum()
             df_study_sum = df_study_sum[df_study_sum > 0]
 
             if df_study_sum.sum() > 0:
@@ -197,13 +197,13 @@ def generate_charts_for_time_period(df, studies, period, period_label):
         st.warning("Aucune étude sélectionnée ou aucune donnée disponible pour les études sélectionnées.")
 
 def process_and_display_data(df, period_label, period_value):
-    df_activities = df.groupby('STUDY')[INT_CATEGORIES].sum()
+    df_activities = df.groupby('STUDY')[TIME_INT_CAT].sum()
     df_activities['Total Time'] = df_activities.sum(axis=1)
     df_activities_sorted = df_activities.sort_values('Total Time', ascending=False)
     create_bar_chart(df_activities_sorted, f'Heures Passées par Étude', f'{period_label} {period_value}')
     
     # Calcul et affichage du temps total passé et du nombre total de visites
-    total_time_spent = df_activities_sorted['Total Time'].sum()
+    total_time_spent = int(df_activities_sorted['Total Time'].sum())
     unit = "heure" if total_time_spent <= 1 else "heures"
     total_visits = int(sum(df['NB_VISITE']))
     
