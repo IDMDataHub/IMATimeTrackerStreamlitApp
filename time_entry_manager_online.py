@@ -363,7 +363,8 @@ def main():
             arc_options = arc_df['ARC'].dropna().astype(str).tolist()
             arc_to_delete = st.selectbox("Choisir un ARC à supprimer", sorted(arc_options))
             if st.button("Archiver l'ARC sélectionné"):
-                arc_df = delete_row(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index, ARC_INFO_FILE)
+                # arc_df = delete_row(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index, ARC_INFO_FILE)
+                arc_df = delete_row_s3(BUCKET_NAME, arc_df[arc_df['ARC'] == arc_to_delete].index, arc_df)
                 st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
 
         with col_modif:
