@@ -270,21 +270,44 @@ def calculate_weeks():
 # ========================================================================================================================================
 # CREATION ET MODIFICATION
 # Vérifie et crée un fichier pour chaque ARC dans le DataFrame
+# def create_time_files_for_arcs(df):
+#     for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
+#         file_name = f"Time_{arc_name}.csv"
+#         st.write(file_name)
+#         # La vérification de l'existence du fichier n'est pas nécessaire dans ce cas
+#         # car écrire sur S3 écrasera le fichier si existant ou le créera si non existant
+#         # Si vous souhaitez vraiment vérifier, vous devrez utiliser s3_client.head_object() dans un try/except
+#         # Création d'un nouveau DataFrame avec les colonnes souhaitées
+#         new_df = pd.DataFrame(columns=CATEGORIES)
+#         # Conversion du DataFrame en chaîne CSV
+#         csv_buffer = StringIO()
+#         new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+#         csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+#         # Envoi du contenu CSV au fichier dans S3
+#         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+
 def create_time_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
         file_name = f"Time_{arc_name}.csv"
-        st.write(file_name)
-        # La vérification de l'existence du fichier n'est pas nécessaire dans ce cas
-        # car écrire sur S3 écrasera le fichier si existant ou le créera si non existant
-        # Si vous souhaitez vraiment vérifier, vous devrez utiliser s3_client.head_object() dans un try/except
-        # Création d'un nouveau DataFrame avec les colonnes souhaitées
-        new_df = pd.DataFrame(columns=CATEGORIES)
-        # Conversion du DataFrame en chaîne CSV
-        csv_buffer = StringIO()
-        new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-        csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
-        # Envoi du contenu CSV au fichier dans S3
-        s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+        try:
+            # Tentez de récupérer les métadonnées de l'objet pour voir s'il existe déjà
+            s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
+            # Si aucune exception n'est levée, le fichier existe déjà, donc nous n'allons pas le créer
+            st.write(f"Le fichier {file_name} existe déjà sur S3. Aucune action prise.")
+        except ClientError as e:
+            error_code = e.response['Error']['Code']
+            if error_code == 'NoSuchKey' or error_code == '404':
+                # Le fichier n'existe pas, vous pouvez créer le fichier
+                new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
+                csv_buffer = StringIO()
+                new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+                csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+                # Envoi du contenu CSV au fichier dans S3
+                s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
+                st.write(f"Le fichier {file_name} a été créé avec succès sur S3.")
+            else:
+                # Une autre erreur s'est produite, qui n'est pas due à l'absence du fichier
+                st.write(f"Une erreur inattendue est survenue lors de la vérification de l'existence du fichier {file_name}: {e}")
 
 def create_ongoing_files_for_arcs(df):
     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
