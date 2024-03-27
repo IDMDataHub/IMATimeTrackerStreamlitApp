@@ -449,6 +449,10 @@ def main():
         last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
         start_week = first_day_of_month.isocalendar()[1]
         end_week = last_day_of_month.isocalendar()[1]
+        st.write(df_data)
+        st.write(year_choice)
+        st.write(start_week)
+        st.write(end_week)
         filtered_month_df = df_data[(df_data['YEAR'] == year_choice) & 
                                     (df_data['WEEK'] >= start_week) & 
                                     (df_data['WEEK'] <= end_week)]
