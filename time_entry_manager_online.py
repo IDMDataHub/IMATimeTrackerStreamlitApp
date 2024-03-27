@@ -647,19 +647,19 @@ def main():
             df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
             create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
         
-    #     metrics_month, metrics_year, metrics_suivi = st.columns([3, 3, 3])
-    #     with metrics_month: 
-    #         nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
-    #         st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
+        metrics_month, metrics_year, metrics_suivi = st.columns([3, 3, 3])
+        with metrics_month: 
+            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+            st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
 
-    #     with metrics_year:
-    #         nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
-    #         st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
+        with metrics_year:
+            nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
+            st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
 
-    #     with metrics_suivi:
-    #         nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
-    #         nb_eos = int(df_patient_included_month['NB_EOS'].sum())
-    #         st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
+        with metrics_suivi:
+            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+            nb_eos = int(df_patient_included_month['NB_EOS'].sum())
+            st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
