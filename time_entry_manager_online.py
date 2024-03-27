@@ -457,7 +457,7 @@ def main():
         # Convertir certaines colonnes en entiers pour les deux tableaux
         int_columns = TIME_INT_CAT
         st.write(df_data)
-        st.write(year_choice)
+        st.write(type(year_choice)
         st.write(start_week)
         st.write(end_week)
         st.write(filtered_week_df)
