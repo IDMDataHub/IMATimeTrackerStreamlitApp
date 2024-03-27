@@ -180,7 +180,7 @@ def process_and_display_data(df, period_label, period_value):
     create_bar_chart(df_activities_sorted, f'Heures Passées par Étude', f'{period_label} {period_value}')
     
     # Calcul et affichage du temps total passé et du nombre total de visites
-    total_time_spent = df_activities_sorted['Total Time'].sum()
+    total_time_spent = int(df_activities_sorted['Total Time'].sum())
     unit = "heure" if total_time_spent <= 1 else "heures"
     total_visits = int(sum(df['NB_VISITE']))
     
