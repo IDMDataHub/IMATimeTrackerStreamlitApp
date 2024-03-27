@@ -526,7 +526,7 @@ def main():
 # ----------------------------------------------------------------------------------------------------------
     with tab5:
         # Sélection d'une étude
-        study_names = load_all_study_names(DATA_FOLDER)
+        study_names = load_all_study_names(BUCKET_NAME)
         study_choice = st.selectbox("Choisissez votre étude", study_names)
 
         # Chargement et combinaison des données de tous les ARCs
