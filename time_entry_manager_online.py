@@ -377,6 +377,7 @@ def main():
                 create_time_files_for_arcs(updated_arc_df)
                 create_ongoing_files_for_arcs(updated_arc_df) 
                 st.success("Informations ARC sauvegardées avec succès.")
+                st.rerun()
 
 # ----------------------------------------------------------------------------------------------------------
     with tab2:
@@ -403,6 +404,7 @@ def main():
             if st.button("Sauvegarder les modifications", key=0):
                 save_data(STUDY_INFO_FILE, updated_study_df)
                 st.success("Informations des Études sauvegardées avec succès.")
+                st.rerun()
 
 # ----------------------------------------------------------------------------------------------------------
     with tab3:
