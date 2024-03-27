@@ -293,8 +293,9 @@ def create_time_files_for_arcs(df):
         try:
             s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
         except ClientError as e:
+            error_code = e.response['Error']['Code']
             # Si le fichier n'existe pas, s3_client.head_object() lèvera une ClientError
-            if e.response['Error']['Code'] == '404':
+            if error_code == '404' or error_code == 'NoSuchKey':
                 # Le fichier n'existe pas, vous pouvez créer le fichier
                 new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
                 csv_buffer = StringIO()
@@ -324,25 +325,22 @@ def create_time_files_for_arcs(df):
 #         s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def create_ongoing_files_for_arcs(df):
-    for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
+    for arc_name in df['ARC'].dropna().unique():
         file_name = f"Ongoing_{arc_name}.csv"
         
         try:
-            # Tentative de récupération des métadonnées du fichier pour vérifier son existence
+            # Tentative de vérification de l'existence du fichier sur S3
             s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
         except ClientError as e:
-            # Si le fichier n'existe pas, head_object() lève une ClientError avec le code d'erreur 404
-            if e.response['Error']['Code'] == '404':
-                # Le fichier n'existe pas, procéder à la création
+            error_code = e.response['Error']['Code']
+            if error_code == '404' or error_code == 'NoSuchKey':
+                # Le fichier n'existe pas, donc vous pouvez le créer.
                 new_df = pd.DataFrame(columns=CATEGORIES)
                 csv_buffer = StringIO()
                 new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
-                csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+                csv_buffer.seek(0)
                 
-                # Envoyer le contenu CSV au fichier dans S3
                 s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
-            else:
-                pass
 
 # Fonction pour ajouter une ligne à un DataFrame
 def add_row_to_df_s3(bucket_name, file_name, df):
