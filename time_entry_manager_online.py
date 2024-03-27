@@ -168,7 +168,7 @@ def plot_pie_chart_on_ax(df_study_sum, titre, ax):
     ax.set_title(titre)
 
 def generate_charts_for_time_period(df, studies, period, period_label):
-    st.write(f"Graphiques pour le/la {period_label} {period}")
+    st.write(f"Graphiques pour {period_label} {period}")
     
     if len(studies) > 0:
         nrows = (len(studies) + 1) // 2 if len(studies) % 2 else len(studies) // 2
@@ -472,7 +472,7 @@ def main():
 
         # Générer les graphiques pour la semaine dans la colonne de gauche
         with col_week:
-            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "semaine")
+            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "la semaine")
      
         # Répéter la même structure pour le mois dans la colonne de droite
         with col_month:
