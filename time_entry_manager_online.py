@@ -291,7 +291,7 @@ def create_time_files_for_arcs(df):
         # Essayez de charger le fichier pour vérifier son existence
         try:
             loaded_df = load_csv_from_s3(BUCKET_NAME, file_name)
-            # Si la fonction ne lève pas d'exception, le fichier existe
+            st.write(f"Le fichier {file_name} existe déjà. Aucune action prise.")
         except Exception as e:  # Utilisation d'un except général pour capturer toute exception
             # Le fichier n'existe pas, créez le fichier
             new_df = pd.DataFrame(columns=CATEGORIES)  # Création d'un nouveau DataFrame avec les colonnes souhaitées
