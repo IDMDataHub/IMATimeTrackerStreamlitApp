@@ -387,7 +387,8 @@ def main():
         with col_ajout:
             st.markdown("#### Ajout d'une nouvelle étude")
             if st.button("Ajouter une Étude"):
-                study_df = add_row_to_df(study_df, STUDY_INFO_FILE)
+                #study_df = add_row_to_df(study_df, STUDY_INFO_FILE)
+                study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
                 st.success("Nouvelle Étude ajoutée.")
 
         with col_suppr:
@@ -395,14 +396,16 @@ def main():
             study_options = study_df['STUDY'].dropna().astype(str).tolist()
             study_to_delete = st.selectbox("Choisir une étude à supprimer", sorted(study_options))
             if st.button("Archiver l'étude sélectionnée"):
-                study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
+                # study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
+                study_df = delete_row_s3(BUCKET_NAME, study_df[study_df['STUDY'] == study_to_delete].index, study_df)
                 st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
 
         with col_modif:
             st.markdown("#### Affectation des études")
             updated_study_df = st.data_editor(data=study_df, hide_index=True)
             if st.button("Sauvegarder les modifications", key=0):
-                save_data(STUDY_INFO_FILE, updated_study_df)
+                save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, updated_study_df)
+                # save_data(STUDY_INFO_FILE, updated_study_df)
                 st.success("Informations des Études sauvegardées avec succès.")
                 st.rerun()
 
