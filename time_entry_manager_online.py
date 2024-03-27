@@ -640,9 +640,9 @@ def main():
         filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
         df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
 
-    #     col_graph1, col_graph2 = st.columns([3, 3])
-    #     with col_graph1:
-    #         create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+        col_graph1, col_graph2 = st.columns([3, 3])
+        with col_graph1:
+            create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
     #     with col_graph2:
     #         df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
     #         create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
