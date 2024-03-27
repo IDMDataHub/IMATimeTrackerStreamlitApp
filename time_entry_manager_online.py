@@ -663,10 +663,13 @@ def main():
         all_arcs_df = pd.DataFrame()
         for arc in ARC_PASSWORDS.keys():
             if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
-                df_arc = load_data(arc)
-                df_arc['ARC'] = arc
-                all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
-
+                try:
+                    df_arc = load_data(arc)
+                    df_arc['ARC'] = arc
+                    all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+                except:
+                    pass
+                    
         # Filtrage des données pour le tableau du mois
         first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
         last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
