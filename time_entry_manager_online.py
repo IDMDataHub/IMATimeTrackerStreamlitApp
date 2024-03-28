@@ -308,19 +308,36 @@ def create_ongoing_files_for_arcs(df):
             s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 # Fonction pour ajouter une ligne à un DataFrame
-def add_row_to_df_s3(bucket_name, file_name, df):
-    # Ajouter une nouvelle ligne au DataFrame avec des valeurs vides pour chaque colonne
-    new_row = pd.DataFrame([["" for _ in df.columns]], columns=df.columns)
-    df = pd.concat([df, new_row], ignore_index=True)
+# def add_row_to_df_s3(bucket_name, file_name, df):
+    # # Ajouter une nouvelle ligne au DataFrame avec des valeurs vides pour chaque colonne
+    # new_row = pd.DataFrame([["" for _ in df.columns]], columns=df.columns)
+    # df = pd.concat([df, new_row], ignore_index=True)
     
+    # # Convertir le DataFrame mis à jour en chaîne CSV
+    # csv_buffer = StringIO()
+    # df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    # csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
+    
+    # # Sauvegarder le DataFrame mis à jour sur S3
+    # s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+    
+    # return df
+
+
+def add_row_to_df_s3(bucket_name, file_name, df, **kwargs):
+    # Créer une nouvelle ligne à partir des kwargs
+    new_row = pd.DataFrame(kwargs, index=[0])
+    # Concaténer la nouvelle ligne au DataFrame existant
+    df = pd.concat([df, new_row], ignore_index=True)
+
     # Convertir le DataFrame mis à jour en chaîne CSV
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
     csv_buffer.seek(0)  # Retour au début du buffer pour lire son contenu
     
-    # Sauvegarder le DataFrame mis à jour sur S3
+    # Sauvegarder le DataFrame mis à jour
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
-    
+
     return df
 
 
@@ -359,13 +376,29 @@ def main():
     with tab1:
         arc_df = load_arc_info()
 
-        col_ajout, col_suppr, espace, col_modif = st.columns([2, 3, 1, 3])
+        col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
         with col_ajout:
+            # st.markdown("#### Ajout d'un nouvel ARC")
+            # if st.button("Ajouter un ARC"):
+            #     arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
+            #     st.success("Nouvel ARC ajouté.")
+            #     st.rerun()
+
             st.markdown("#### Ajout d'un nouvel ARC")
-            if st.button("Ajouter un ARC"):
-                arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
-                st.success("Nouvel ARC ajouté.")
-                st.rerun()
+            new_arc_name = st.text_input("Nom du nouvel ARC", key="new_arc_name")
+            new_arc_mdp = st.text_input("Mot de passe pour le nouvel ARC", key="new_arc_mdp")
+            if st.button("Ajouter l'ARC"):
+                if new_arc_name and new_arc_mdp:  # Vérifier que les champs ne sont pas vides
+                    arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, 
+                        ARC=new_arc_name, 
+                        MDP=new_arc_mdp)
+                    create_time_files_for_arcs(arc_df)
+                    create_ongoing_files_for_arcs(arc_df) 
+                    st.success(f"Nouvel ARC '{new_arc_name}' ajouté avec succès.")
+                    st.rerun()
+                else:
+                    st.error("Veuillez remplir le nom de l'ARC et le mot de passe.")            
+
 
         with col_suppr:
             st.markdown("#### Suppression d'un ARC")
@@ -377,46 +410,88 @@ def main():
                 st.rerun()
 
         with col_modif:
-            st.markdown("#### Gestion des mots de passes")
-            updated_arc_df = st.data_editor(data=arc_df, hide_index=True)
-            if st.button("Sauvegarder les modifications"):
-                save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, updated_arc_df)
-                create_time_files_for_arcs(updated_arc_df)
-                create_ongoing_files_for_arcs(updated_arc_df) 
-                st.success("Informations ARC sauvegardées avec succès.")
-                st.rerun()
+            # st.markdown("#### Gestion des mots de passes")
+            # updated_arc_df = st.data_editor(data=arc_df, hide_index=True)
+            # if st.button("Sauvegarder les modifications"):
+            #     save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, updated_arc_df)
+            #     create_time_files_for_arcs(updated_arc_df)
+            #     create_ongoing_files_for_arcs(updated_arc_df) 
+            #     st.success("Informations ARC sauvegardées avec succès.")
+            #     st.rerun()
 
+            st.markdown("#### Gestion des mots de passes")
+            for i, row in arc_df.iterrows():
+                with st.expander(f"{row['ARC']}"):
+                    new_mdp = st.text_input(f"Nouveau mot de passe", value=row['MDP'], key=f"mdp_{i}")
+                    # Mettre à jour le DataFrame en session_state si le mot de passe change
+                    if new_mdp != row['MDP']:
+                        arc_df.at[i, 'MDP'] = new_mdp
+            # Bouton pour sauvegarder les modifications
+            if st.button('Sauvegarder les modifications'):
+                # Utilisez ici votre fonction de sauvegarde des données
+                save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
+                st.success('Modifications sauvegardées avec succès.')
+                st.rerun()
 # ----------------------------------------------------------------------------------------------------------
     with tab2:
         study_df = load_study_info()
 
-        col_ajout, col_suppr, espace, col_modif = st.columns([2, 3, 1, 3])
+        col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
         with col_ajout:
+            # st.markdown("#### Ajout d'une nouvelle étude")
+            # if st.button("Ajouter une Étude"):
+            #     study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
+            #     st.success("Nouvelle Étude ajoutée.")
+            #     st.rerun()
             st.markdown("#### Ajout d'une nouvelle étude")
-            if st.button("Ajouter une Étude"):
-                #study_df = add_row_to_df(study_df, STUDY_INFO_FILE)
-                study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
-                st.success("Nouvelle Étude ajoutée.")
-                st.rerun()
+            new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
+            new_study_arc_principal = st.text_input("ARC principal", key="new_study_arc_principal")
+            new_study_arc_backup = st.text_input("ARC de backup (optionnel)", key="new_study_arc_backup")
+
+            if st.button("Ajouter l'étude"):
+                if new_study_name and new_study_arc_principal:  # Vérification minimale
+                    # Ajout de la nouvelle étude
+                    study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df
+                                             STUDY=new_study_name, 
+                                             ARC=new_study_arc_principal, 
+                                             ARC_BACKUP=new_study_arc_backup if new_study_arc_backup else "")
+                    st.success(f"Nouvelle étude '{new_study_name}' ajoutée avec succès.")
+                    st.rerun()
+                else:
+                    st.error("Le nom de l'étude et l'ARC principal sont requis.")        
 
         with col_suppr:
             st.markdown("#### Suppression d'une étude")
             study_options = study_df['STUDY'].dropna().astype(str).tolist()
             study_to_delete = st.selectbox("Choisir une étude à supprimer", sorted(study_options))
             if st.button("Archiver l'étude sélectionnée"):
-                # study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
                 study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
                 st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
                 st.rerun()
 
         with col_modif:
+            # st.markdown("#### Affectation des études")
+            # updated_study_df = st.data_editor(data=study_df, hide_index=True)
+            # if st.button("Sauvegarder les modifications", key=0):
+            #     save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, updated_study_df)
+            #     st.success("Informations des Études sauvegardées avec succès.")
+            #     st.rerun()
             st.markdown("#### Affectation des études")
-            updated_study_df = st.data_editor(data=study_df, hide_index=True)
-            if st.button("Sauvegarder les modifications", key=0):
-                save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, updated_study_df)
-                # save_data(STUDY_INFO_FILE, updated_study_df)
-                st.success("Informations des Études sauvegardées avec succès.")
-                st.rerun()
+            for i, row in study_df.iterrows():
+                with st.expander(f"{row['STUDY']}"):
+                    # Pour chaque étude, permettez la modification de l'ARC principal, du backup et du mot de passe
+                    new_arc_principal = st.text_input(f"ARC Principal pour {row['STUDY']}", value=row['ARC'], key=f"principal_{i}")
+                    new_arc_backup = st.text_input(f"ARC Backup pour {row['STUDY']}", value=row['ARC_BACKUP'], key=f"backup_{i}", help="Optionnel")
+
+                    # Appliquer les modifications directement, cela nécessiterait un bouton de sauvegarde pour chaque étude ou un global après la boucle
+                    study_df.at[i, 'ARC'] = new_arc_principal
+                    study_df.at[i, 'ARC_BACKUP'] = new_arc_backup
+
+            # Bouton global pour sauvegarder toutes les modifications
+            if st.button('Sauvegarder les modifications', key=19):
+                save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
+                st.success('Modifications sauvegardées avec succès.')
+                st.rerun() 
 
 # ----------------------------------------------------------------------------------------------------------
     with tab3:
