@@ -345,7 +345,7 @@ def delete_row_s3(bucket_name, file_name, df, row_to_delete):
 # Fonction principale de l'application Streamlit
 def main():
     try:
-        st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
+        st.set_page_config(layout="wide", page_icon="📊", page_title="I-Motion Adulte - Espace Chefs de Projets")
     except:
         pass
     st.title("I-Motion Adulte - Espace Chefs de Projets")
