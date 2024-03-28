@@ -370,11 +370,12 @@ def main():
 
         with col_modif:
             st.markdown("#### Affectation des études")
+            arc_options = arc_df['ARC'].dropna().astype(str).tolist()
             for i, row in study_df.iterrows():
                 with st.expander(f"{row['STUDY']}"):
                     # Pour chaque étude, permettez la modification de l'ARC principal, du backup et du mot de passe
-                    new_arc_principal = st.text_input(f"ARC Principal pour {row['STUDY']}", value=row['ARC'], key=f"principal_{i}")
-                    new_arc_backup = st.text_input(f"ARC Backup pour {row['STUDY']}", value=row['ARC_BACKUP'], key=f"backup_{i}", help="Optionnel")
+                    new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", sorted(arc_options), key=f"principal_{i}")
+                    new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", sorted(arc_options), key=f"backup_{i}", help="Optionnel")
 
                     # Appliquer les modifications directement, cela nécessiterait un bouton de sauvegarde pour chaque étude ou un global après la boucle
                     study_df.at[i, 'ARC'] = new_arc_principal
