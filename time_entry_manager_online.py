@@ -451,7 +451,7 @@ def main():
             if st.button("Ajouter l'étude"):
                 if new_study_name and new_study_arc_principal:  # Vérification minimale
                     # Ajout de la nouvelle étude
-                    study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df
+                    study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
                                              STUDY=new_study_name, 
                                              ARC=new_study_arc_principal, 
                                              ARC_BACKUP=new_study_arc_backup if new_study_arc_backup else "")
