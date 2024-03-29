@@ -352,7 +352,7 @@ def main():
     st.write("---")
 
     # Onglet de sélection
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARCs", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etudes", "📊 Dashboard - toutes Etudes"])
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARCs", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etude", "📊 Dashboard - toutes Etudes"])
 
 # ----------------------------------------------------------------------------------------------------------
     with tab1:
