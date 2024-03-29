@@ -386,7 +386,7 @@ def main():
                 st.rerun()
 
         with col_modif:
-            st.markdown("#### Gestion des mots de passes")
+            st.markdown("#### Gestion des mots de passe")
             for i, row in arc_df.iterrows():
                 with st.expander(f"{row['ARC']}"):
                     new_mdp = st.text_input(f"Nouveau mot de passe", value=row['MDP'], key=f"mdp_{i}")
