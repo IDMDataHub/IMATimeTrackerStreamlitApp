@@ -546,7 +546,7 @@ def main():
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
         # Utiliser current_year au lieu de 2024 directement
-        last_5_weeks = [(current_week - i) % 52 or 52 for i in range(1, 6)]
+        last_5_weeks = [(current_week - i - 1) % 52 + 1 for i in range(5)]
         all_weeks_current_year = np.arange(1, 53)  # Toutes les semaines pour l'année courante
         dfs = {}  # Pour stocker les DataFrames
 
