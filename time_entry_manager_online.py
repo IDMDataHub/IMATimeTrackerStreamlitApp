@@ -434,24 +434,26 @@ def main():
         with col_modif:
             st.markdown("#### Affectation des études")
             arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-            arc_options = sorted(arc_options) + ['nan']
+            arc_options = sorted(arc_options) + ['Aucun']  # Remplace 'nan' par 'Aucun'
+
             for i, row in study_df.iterrows():
                 with st.expander(f"{row['STUDY']}"):
-                    st.write(f"ARC Principal actuel : {row['ARC']}")
-                    # Trouvez l'index de l'ARC principal actuel dans les options
-                    arc_principal_index = arc_options.index(row['ARC']) if row['ARC'] in arc_options else len(arc_options) - 1
+                    # Trouvez l'index de l'ARC principal actuel dans les options, en traitant 'nan' comme 'Aucun'
+                    arc_principal_current = 'Aucun' if pd.isna(row['ARC']) else row['ARC']
+                    arc_principal_index = arc_options.index(arc_principal_current) if arc_principal_current in arc_options else len(arc_options) - 1
                     # Sélectionnez l'ARC principal avec l'index trouvé
                     new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", arc_options, index=arc_principal_index, key=f"principal_{i}")
                     
-                    st.write(f"ARC Backup actuel : {row['ARC_BACKUP']}")
-                    # Trouvez l'index de l'ARC de secours actuel dans les options
-                    arc_backup_index = arc_options.index(row['ARC_BACKUP']) if row['ARC_BACKUP'] in arc_options else len(arc_options) - 1
+                    # Trouvez l'index de l'ARC de secours actuel dans les options, en traitant 'nan' comme 'Aucun'
+                    arc_backup_current = 'Aucun' if pd.isna(row['ARC_BACKUP']) else row['ARC_BACKUP']
+                    arc_backup_index = arc_options.index(arc_backup_current) if arc_backup_current in arc_options else len(arc_options) - 1
                     # Sélectionnez l'ARC de secours avec l'index trouvé
                     new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", arc_options, index=arc_backup_index, key=f"backup_{i}", help="Optionnel")
 
-                    # Appliquer les modifications directement, cela nécessiterait un bouton de sauvegarde pour chaque étude ou un global après la boucle
-                    study_df.at[i, 'ARC'] = new_arc_principal
-                    study_df.at[i, 'ARC_BACKUP'] = new_arc_backup
+                    # Avant de sauvegarder, remplacez 'Aucun' par np.nan
+                    study_df.at[i, 'ARC'] = np.nan if new_arc_principal == 'Aucun' else new_arc_principal
+                    study_df.at[i, 'ARC_BACKUP'] = np.nan if new_arc_backup == 'Aucun' else new_arc_backup
+
 
             # Bouton global pour sauvegarder toutes les modifications
             if st.button('Sauvegarder les modifications', key=19):
