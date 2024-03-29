@@ -437,10 +437,17 @@ def main():
             arc_options = sorted(arc_options) + ['nan']
             for i, row in study_df.iterrows():
                 with st.expander(f"{row['STUDY']}"):
-                    st.write(row['ARC'])
-                    # Pour chaque étude, permettez la modification de l'ARC principal, du backup et du mot de passe
-                    new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", arc_options, key=f"principal_{i}", value=row['ARC'])
-                    new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", arc_options, index=len(arc_options)-1, key=f"backup_{i}", help="Optionnel")
+                    st.write(f"ARC Principal actuel : {row['ARC']}")
+                    # Trouvez l'index de l'ARC principal actuel dans les options
+                    arc_principal_index = arc_options.index(row['ARC']) if row['ARC'] in arc_options else len(arc_options) - 1
+                    # Sélectionnez l'ARC principal avec l'index trouvé
+                    new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", arc_options, index=arc_principal_index, key=f"principal_{i}")
+                    
+                    st.write(f"ARC Backup actuel : {row['ARC_BACKUP']}")
+                    # Trouvez l'index de l'ARC de secours actuel dans les options
+                    arc_backup_index = arc_options.index(row['ARC_BACKUP']) if row['ARC_BACKUP'] in arc_options else len(arc_options) - 1
+                    # Sélectionnez l'ARC de secours avec l'index trouvé
+                    new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", arc_options, index=arc_backup_index, key=f"backup_{i}", help="Optionnel")
 
                     # Appliquer les modifications directement, cela nécessiterait un bouton de sauvegarde pour chaque étude ou un global après la boucle
                     study_df.at[i, 'ARC'] = new_arc_principal
