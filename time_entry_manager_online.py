@@ -437,7 +437,7 @@ def main():
             arc_options = sorted(arc_options) + ['nan']
             for i, row in study_df.iterrows():
                 with st.expander(f"{row['STUDY']}"):
-                    st.write(row)
+                    st.write(row['ARC'])
                     # Pour chaque étude, permettez la modification de l'ARC principal, du backup et du mot de passe
                     new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", arc_options, key=f"principal_{i}")
                     new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", arc_options, index=len(arc_options)-1, key=f"backup_{i}", help="Optionnel")
