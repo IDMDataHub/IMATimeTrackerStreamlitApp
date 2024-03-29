@@ -377,12 +377,12 @@ def main():
 
 
         with col_suppr:
-            st.markdown("#### Suppression d'un ARC")
+            st.markdown("#### Archivage d'un ARC")
             arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-            arc_to_delete = st.selectbox("Choisir un ARC à supprimer", sorted(arc_options))
+            arc_to_delete = st.selectbox("Choisir un ARC à archiver", sorted(arc_options))
             if st.button("Archiver l'ARC sélectionné"):
                 arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
-                st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
+                st.success(f"ARC '{arc_to_delete}' archivé avec succès.")
                 st.rerun()
 
         with col_modif:
@@ -423,12 +423,12 @@ def main():
                     st.error("Le nom de l'étude et l'ARC principal sont requis.")        
 
         with col_suppr:
-            st.markdown("#### Suppression d'une étude")
+            st.markdown("#### Archivage d'une étude")
             study_options = study_df['STUDY'].dropna().astype(str).tolist()
-            study_to_delete = st.selectbox("Choisir une étude à supprimer", sorted(study_options))
+            study_to_delete = st.selectbox("Choisir une étude à archiver", sorted(study_options))
             if st.button("Archiver l'étude sélectionnée"):
                 study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
-                st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
+                st.success(f"L'étude '{study_to_delete}' est archivée avec succès.")
                 st.rerun()
 
         with col_modif:
