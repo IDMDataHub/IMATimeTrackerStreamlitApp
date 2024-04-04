@@ -144,7 +144,7 @@ def save_data_to_s3(bucket_name, file_name, df):
 # ========================================================================================================================================
 # GRAPH ET AFFICHAGE
 
-def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis):
+def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Heures"):
     """Crée un graphique en barres pour les données fournies avec des couleurs cohérentes."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
@@ -739,7 +739,7 @@ def main():
 
             col_graph1, col_graph2 = st.columns([3, 3])
             with col_graph1:
-                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name, y_axis="heure")
+                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
             with col_graph2:
                 df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
                 create_bar_chart(df_patient_included_month, "Nombre d'inclusions", selected_month_name, 'NB_PAT_SCR', y_axis="")
