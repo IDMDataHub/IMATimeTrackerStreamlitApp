@@ -22,6 +22,7 @@ DATA_FOLDER = "C:/Users/m.jacoupy/OneDrive - Institut/Documents/3 - Developpemen
 # Fichier contenant les informations des ARC et des études
 ARC_INFO_FILE = "ARC_MDP.csv"
 STUDY_INFO_FILE = "STUDY.csv"
+MOT_DE_PASSE = "passe"
 ANNEES = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
@@ -286,6 +287,7 @@ def main():
         st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
     except:
         pass
+
     st.title("I-Motion Adulte - Espace Chefs de Projets")
     st.write("---")
 
@@ -315,16 +317,16 @@ def main():
 
 
         with col_suppr:
-            st.markdown("#### Suppression d'un ARC")
+            st.markdown("#### Archivage d'un ARC")
             arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-            arc_to_delete = st.selectbox("Choisir un ARC à supprimer", sorted(arc_options))
+            arc_to_delete = st.selectbox("Choisir un ARC à archiver", sorted(arc_options))
             if st.button("Archiver l'ARC sélectionné"):
                 arc_df = delete_row(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index, ARC_INFO_FILE)
-                st.success(f"ARC '{arc_to_delete}' supprimé avec succès.")
+                st.success(f"ARC '{arc_to_delete}' archivé avec succès.")
                 st.rerun()
 
         with col_modif:
-            st.markdown("#### Gestion des mots de passes")
+            st.markdown("#### Gestion des mots de passe")
             for i, row in arc_df.iterrows():
                 with st.expander(f"{row['ARC']}"):
                     new_mdp = st.text_input(f"Nouveau mot de passe", value=row['MDP'], key=f"mdp_{i}")
@@ -361,12 +363,12 @@ def main():
                     st.error("Le nom de l'étude et l'ARC principal sont requis.")
 
         with col_suppr:
-            st.markdown("#### Suppression d'une étude")
+            st.markdown("#### Archivage d'une étude")
             study_options = study_df['STUDY'].dropna().astype(str).tolist()
-            study_to_delete = st.selectbox("Choisir une étude à supprimer", sorted(study_options))
+            study_to_delete = st.selectbox("Choisir une étude à archiver", sorted(study_options))
             if st.button("Archiver l'étude sélectionnée"):
                 study_df = delete_row(study_df, study_df[study_df['STUDY'] == study_to_delete].index, STUDY_INFO_FILE)
-                st.success(f"L'étude '{study_to_delete}' supprimée avec succès.")
+                st.success(f"L'étude '{study_to_delete}' archvée avec succès.")
 
         with col_modif:
             st.markdown("#### Affectation des études")
@@ -473,7 +475,7 @@ def main():
         previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
         # Utiliser current_year au lieu de 2024 directement
-        last_5_weeks = [(current_week - i) % 52 or 52 for i in range(1, 6)]
+        last_5_weeks = [(current_week - i - 1) % 52 + 1 for i in range(5)]
         all_weeks_current_year = np.arange(1, 53)  # Toutes les semaines pour l'année courante
         dfs = {}  # Pour stocker les DataFrames
 
@@ -633,7 +635,7 @@ def main():
             create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
         with col_graph2:
             df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
-            create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
+            create_bar_chart(df_patient_included_month, "Nombre d'inclusions", selected_month_name, 'NB_PAT_SCR')
         
         metrics_year, metrics_month, metrics_suivi = st.columns([3, 3, 3])
         with metrics_year:
