@@ -661,7 +661,7 @@ def main():
                 st.pyplot(fig)
                 
             st.write("---")
-            col_arc, col_scr, col_rand= st.columns([1, 1, 1])
+            col_arc, col_scr, col_rand, col_eos, col_calc= st.columns([2, 1, 1, 1, 1])
 
             with col_arc:
                 st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
@@ -685,6 +685,15 @@ def main():
             with col_rand:
                 rando_pat = int(filtered_df_by_study['NB_PAT_RAN'].sum())
                 st.metric(label="Nombre total de patients randomisés", value=rando_pat)
+
+            with col_eos:
+                eos_pat = int(filtered_df_by_study['NB_EOS'].sum())
+                st.metric(label="Nombre total de patients EOS", value=eos_pat)
+
+            with col_calc:
+                calc_pat = rando_pat - eos_pat
+                st.metric(label="Nombre total de patients en cours de suivi", value=calc_pat)
+
 
     # ----------------------------------------------------------------------------------------------------------
         with tab6:
