@@ -144,7 +144,7 @@ def save_data_to_s3(bucket_name, file_name, df):
 # ========================================================================================================================================
 # GRAPH ET AFFICHAGE
 
-def create_bar_chart(data, title, week_or_month, y='Total Time'):
+def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis):
     """Crée un graphique en barres pour les données fournies avec des couleurs cohérentes."""
     fig, ax = plt.subplots(figsize=(10, 4))
 
@@ -159,7 +159,7 @@ def create_bar_chart(data, title, week_or_month, y='Total Time'):
     sns.barplot(x=data.index, y=y, data=data, ax=ax, palette=color_mapping)
     ax.set_title(f'{title} pour {week_or_month}')
     ax.set_xlabel('')
-    ax.set_ylabel('Heures')
+    ax.set_ylabel(y_axis)
     ax.xaxis.set_ticks_position('none') 
     ax.yaxis.set_ticks_position('none')
     sns.despine(left=False, bottom=False)
@@ -739,10 +739,10 @@ def main():
 
             col_graph1, col_graph2 = st.columns([3, 3])
             with col_graph1:
-                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name, y_axis="heure")
             with col_graph2:
                 df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
-                create_bar_chart(df_patient_included_month, "Nombre d'inclusions", selected_month_name, 'NB_PAT_SCR')
+                create_bar_chart(df_patient_included_month, "Nombre d'inclusions", selected_month_name, 'NB_PAT_SCR', y_axis="")
             
             metrics_year, metrics_month, metrics_suivi = st.columns([3, 3, 3])
             with metrics_year:
