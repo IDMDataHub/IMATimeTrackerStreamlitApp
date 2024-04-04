@@ -358,7 +358,7 @@ def main():
     if not st.session_state.authenticated:
         espace1, col_mdp, espace2 = st.columns([2, 3, 2])
         with col_mdp:
-            mot_de_passe_saisi = st.text_input("Entrez le mot de passe", type="password").upper()
+            mot_de_passe_saisi = st.text_input("Entrez le mot de passe", type="password")
 
             if mot_de_passe_saisi == MOT_DE_PASSE:
                 st.session_state.authenticated = True
