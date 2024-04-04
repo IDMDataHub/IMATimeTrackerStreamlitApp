@@ -24,6 +24,7 @@ from botocore.exceptions import ClientError
 BUCKET_NAME = "bucketidb"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 STUDY_INFO_FILE = "STUDY.csv"
+MOT_DE_PASSE = st.secrets["APP_MDP"]
 ANNEES = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
@@ -348,388 +349,403 @@ def main():
         st.set_page_config(layout="wide", page_icon="📊", page_title="I-Motion Adulte - Espace Chefs de Projets")
     except:
         pass
-    st.title("I-Motion Adulte - Espace Chefs de Projets")
-    st.write("---")
-
-    # Onglet de sélection
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARCs", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etude", "📊 Dashboard - toutes Etudes"])
-
-# ----------------------------------------------------------------------------------------------------------
-    with tab1:
-        arc_df = load_arc_info()
-
-        col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
-        with col_ajout:
-            st.markdown("#### Ajout d'un nouvel ARC")
-            new_arc_name = st.text_input("Nom du nouvel ARC", key="new_arc_name")
-            new_arc_mdp = st.text_input("Mot de passe pour le nouvel ARC", key="new_arc_mdp")
-            if st.button("Ajouter l'ARC"):
-                if new_arc_name and new_arc_mdp:  # Vérifier que les champs ne sont pas vides
-                    arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, 
-                        ARC=new_arc_name, 
-                        MDP=new_arc_mdp)
-                    create_time_files_for_arcs(arc_df)
-                    create_ongoing_files_for_arcs(arc_df) 
-                    st.success(f"Nouvel ARC '{new_arc_name}' ajouté avec succès.")
-                    st.rerun()
-                else:
-                    st.error("Veuillez remplir le nom de l'ARC et le mot de passe.")            
 
 
-        with col_suppr:
-            st.markdown("#### Archivage d'un ARC")
-            arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-            arc_to_delete = st.selectbox("Choisir un ARC à archiver", sorted(arc_options))
-            if st.button("Archiver l'ARC sélectionné"):
-                arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
-                st.success(f"ARC '{arc_to_delete}' archivé avec succès.")
-                st.rerun()
+    # Initialisation de st.session_state
+    if "authenticated" not in st.session_state:
+        st.session_state.authenticated = False
 
-        with col_modif:
-            st.markdown("#### Gestion des mots de passe")
-            for i, row in arc_df.iterrows():
-                with st.expander(f"{row['ARC']}"):
-                    new_mdp = st.text_input(f"Nouveau mot de passe", value=row['MDP'], key=f"mdp_{i}")
-                    # Mettre à jour le DataFrame en session_state si le mot de passe change
-                    if new_mdp != row['MDP']:
-                        arc_df.at[i, 'MDP'] = new_mdp
-            # Bouton pour sauvegarder les modifications
-            if st.button('Sauvegarder les modifications'):
-                # Utilisez ici votre fonction de sauvegarde des données
-                save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
-                st.success('Modifications sauvegardées avec succès.')
-                st.rerun()
-# ----------------------------------------------------------------------------------------------------------
-    with tab2:
-        study_df = load_study_info()
+    if not st.session_state.authenticated:
+        mot_de_passe_saisi = st.text_input("Entrez le mot de passe", type="password").upper()
 
-        col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
-        with col_ajout:
-            st.markdown("#### Ajout d'une nouvelle étude")
-            new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
-            new_study_arc_principal = st.text_input("ARC principal", key="new_study_arc_principal")
-            new_study_arc_backup = st.text_input("ARC de backup (optionnel)", key="new_study_arc_backup")
+        if mot_de_passe_saisi == MOT_DE_PASSE:
+            st.session_state.authenticated = True
+        else:
+            st.write("Mot de passe incorrect. Veuillez réessayer.")
 
-            if st.button("Ajouter l'étude"):
-                if new_study_name and new_study_arc_principal:  # Vérification minimale
-                    # Ajout de la nouvelle étude
-                    study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
-                                             STUDY=new_study_name, 
-                                             ARC=new_study_arc_principal, 
-                                             ARC_BACKUP=new_study_arc_backup if new_study_arc_backup else "")
-                    st.success(f"Nouvelle étude '{new_study_name}' ajoutée avec succès.")
-                    st.rerun()
-                else:
-                    st.error("Le nom de l'étude et l'ARC principal sont requis.")        
-
-        with col_suppr:
-            st.markdown("#### Archivage d'une étude")
-            study_options = study_df['STUDY'].dropna().astype(str).tolist()
-            study_to_delete = st.selectbox("Choisir une étude à archiver", sorted(study_options))
-            if st.button("Archiver l'étude sélectionnée"):
-                study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
-                st.success(f"L'étude '{study_to_delete}' est archivée avec succès.")
-                st.rerun()
-
-        with col_modif:
-            st.markdown("#### Affectation des études")
-            arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-            arc_options = sorted(arc_options) + ['Aucun']  # Remplace 'nan' par 'Aucun'
-
-            for i, row in study_df.iterrows():
-                with st.expander(f"{row['STUDY']}"):
-                    # Trouvez l'index de l'ARC principal actuel dans les options, en traitant 'nan' comme 'Aucun'
-                    arc_principal_current = 'Aucun' if pd.isna(row['ARC']) else row['ARC']
-                    arc_principal_index = arc_options.index(arc_principal_current) if arc_principal_current in arc_options else len(arc_options) - 1
-                    # Sélectionnez l'ARC principal avec l'index trouvé
-                    new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", arc_options, index=arc_principal_index, key=f"principal_{i}")
-                    
-                    # Trouvez l'index de l'ARC de secours actuel dans les options, en traitant 'nan' comme 'Aucun'
-                    arc_backup_current = 'Aucun' if pd.isna(row['ARC_BACKUP']) else row['ARC_BACKUP']
-                    arc_backup_index = arc_options.index(arc_backup_current) if arc_backup_current in arc_options else len(arc_options) - 1
-                    # Sélectionnez l'ARC de secours avec l'index trouvé
-                    new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", arc_options, index=arc_backup_index, key=f"backup_{i}", help="Optionnel")
-
-                    # Avant de sauvegarder, remplacez 'Aucun' par np.nan
-                    study_df.at[i, 'ARC'] = np.nan if new_arc_principal == 'Aucun' else new_arc_principal
-                    study_df.at[i, 'ARC_BACKUP'] = np.nan if new_arc_backup == 'Aucun' else new_arc_backup
-
-
-            # Bouton global pour sauvegarder toutes les modifications
-            if st.button('Sauvegarder les modifications', key=19):
-                save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
-                st.success('Modifications sauvegardées avec succès.')
-                st.rerun() 
-
-# ----------------------------------------------------------------------------------------------------------
-    with tab3:
-        col_arc, col_year, espace1, espace2 = st.columns(4)
-
-        with col_arc:
-            arc = st.selectbox("Choix de l'ARC", list(ARC_PASSWORDS.keys()), key=2)
-
-        with col_year:
-            year_choice = st.selectbox("Année", ANNEES, key=3, index=ANNEES.index(datetime.datetime.now().year))
-
-        # I. Chargement des données
-        df_data = load_data(arc)
-        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
-
-        associated_studies = df_data['STUDY'].unique().tolist()
-        filtered_studies_df = study_df[study_df['STUDY'].isin(associated_studies)]
-        associated_studies = filtered_studies_df['STUDY'].unique().tolist()
-
-        # Liste des noms de mois
-        month_names = MONTHS
-
-        # II. Interface utilisateur pour la sélection de l'année, du mois et de la semaine
-        col_week, espace, col_month = st.columns([1, 0.25, 1])
-        with col_week:
-            week_choice = st.slider("Semaine", 1, 52, current_week, key=4)
-        with col_month:
-            # Assurez-vous que le choix du mois utilise une clé différente
-            selected_month_name = st.select_slider("Mois", options=month_names, 
-                            value=month_names[current_month - 1], key=6)
-            # Convertir le nom du mois sélectionné en numéro
-            month_choice = month_names.index(selected_month_name) + 1
-
-        # Filtrage des données pour le tableau de la semaine
-        filtered_week_df = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
-
-        # Filtrage des données pour le tableau du mois
-        first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
-        last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
-        start_week = first_day_of_month.isocalendar()[1]
-        end_week = last_day_of_month.isocalendar()[1]
-        filtered_month_df = df_data[(df_data['YEAR'].astype(int) == year_choice) & 
-                            (df_data['WEEK'].astype(int) >= start_week) & 
-                            (df_data['WEEK'].astype(int) <= end_week)]
-
-
-        # Convertir certaines colonnes en entiers pour les deux tableaux
-        filtered_week_df[TIME_INT_CAT] = filtered_week_df[TIME_INT_CAT].astype(int)
-        filtered_month_df[TIME_INT_CAT] = filtered_month_df[TIME_INT_CAT].astype(int)
-
-
-        # Utilisation de la fonction pour les données hebdomadaires
-        with col_week:
-            process_and_display_data(filtered_week_df, "semaine", week_choice)
-
-        # Utilisation de la fonction pour les données mensuelles
-        with col_month:
-            process_and_display_data(filtered_month_df, "mois", selected_month_name)
-
+    if st.session_state.authenticated:
+        st.title("I-Motion Adulte - Espace Chefs de Projets")
         st.write("---")
 
-        # Selection des études avec multiselect
-        sel_studies = st.multiselect("Choisir une ou plusieurs études", options=associated_studies, default=associated_studies, key=10)
-        num_studies = len(sel_studies)
+        # Onglet de sélection
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARCs", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etude", "📊 Dashboard - toutes Etudes"])
 
-        # Calculer le nombre de lignes nécessaires pour deux colonnes
-        nrows = (num_studies + 1) // 2 if num_studies % 2 else num_studies // 2
+    # ----------------------------------------------------------------------------------------------------------
+        with tab1:
+            arc_df = load_arc_info()
 
-        # Créer les colonnes principales pour les semaines et les mois
-        col_week, col_month = st.columns(2)
-
-        # Générer les graphiques pour la semaine dans la colonne de gauche
-        with col_week:
-            generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "la semaine")
-     
-        # Répéter la même structure pour le mois dans la colonne de droite
-        with col_month:
-            generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "")
-
-# ----------------------------------------------------------------------------------------------------------
-    with tab4:
-        arcs = list(ARC_PASSWORDS.keys())
-
-        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
-
-        # Utiliser current_year au lieu de 2024 directement
-        last_5_weeks = [(current_week - i - 1) % 52 + 1 for i in range(5)]
-        all_weeks_current_year = np.arange(1, 53)  # Toutes les semaines pour l'année courante
-        dfs = {}  # Pour stocker les DataFrames
-
-        for arc in arcs:
-            if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
-                try:
-                    df_arc = load_data(arc)
-                    df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
-                    df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
-                    
-                    # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
-                    df_all_last_5_weeks = pd.DataFrame({'YEAR': current_year, 'WEEK': last_5_weeks, 'Total Time': 0}).merge(
-                        df_arc[(df_arc['YEAR'] == current_year) & (df_arc['WEEK'].isin(last_5_weeks))],
-                        on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
-                    df_all_last_5_weeks['Total Time'] = df_all_last_5_weeks[['Total Time', 'Total Time_y']].max(axis=1)
-                    df_all_last_5_weeks.drop(columns=['Total Time_y'], inplace=True)
-                    
-                    # Préparer un DataFrame pour toutes les semaines de l'année courante avec des valeurs par défaut à 0
-                    df_all_current_year = pd.DataFrame({'YEAR': current_year, 'WEEK': all_weeks_current_year, 'Total Time': 0}).merge(
-                        df_arc[df_arc['YEAR'] == current_year],
-                        on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
-                    df_all_current_year['Total Time'] = df_all_current_year[['Total Time', 'Total Time_y']].max(axis=1)
-                    df_all_current_year.drop(columns=['Total Time_y'], inplace=True)
-                    
-                    dfs[arc] = {'last_5_weeks': df_all_last_5_weeks, 'current_year': df_all_current_year}
-                except:
-                    pass
-            else:
-                st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
-
-        col_month, col_year = st.columns(2)
-        
-        # Pour le graphique des 5 dernières semaines
-        with col_month:
-            generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire", mode='last_5_weeks')
-
-                # Pour le graphique de l'année en cours
-        with col_year:
-            generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
-
-# ----------------------------------------------------------------------------------------------------------
-    with tab5:
-        # Sélection d'une étude
-        study_names = load_all_study_names(BUCKET_NAME)
-        study_choice = st.selectbox("Choisissez votre étude", study_names)
-
-        # Chargement et combinaison des données de tous les ARCs
-        all_arcs_df = pd.DataFrame()
-        for arc in ARC_PASSWORDS.keys():
-            if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
-                try:
-                    df_arc = load_data(arc)
-                    df_arc['ARC'] = arc
-                    all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
-                except:
-                    pass
-
-        # Filtrage des données par étude sélectionnée
-        filtered_df_by_study = all_arcs_df[all_arcs_df['STUDY'] == study_choice]
-
-        # Assurez-vous que les colonnes d'intérêt sont de type numérique pour le calcul
-        filtered_df_by_study[TIME_INT_CAT] = filtered_df_by_study[TIME_INT_CAT].apply(pd.to_numeric, errors='coerce')
-
-        # Calculer le temps total passé par catégorie d'activité pour l'étude sélectionnée
-        total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
+            col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
+            with col_ajout:
+                st.markdown("#### Ajout d'un nouvel ARC")
+                new_arc_name = st.text_input("Nom du nouvel ARC", key="new_arc_name")
+                new_arc_mdp = st.text_input("Mot de passe pour le nouvel ARC", key="new_arc_mdp")
+                if st.button("Ajouter l'ARC"):
+                    if new_arc_name and new_arc_mdp:  # Vérifier que les champs ne sont pas vides
+                        arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, 
+                            ARC=new_arc_name, 
+                            MDP=new_arc_mdp)
+                        create_time_files_for_arcs(arc_df)
+                        create_ongoing_files_for_arcs(arc_df) 
+                        st.success(f"Nouvel ARC '{new_arc_name}' ajouté avec succès.")
+                        st.rerun()
+                    else:
+                        st.error("Veuillez remplir le nom de l'ARC et le mot de passe.")            
 
 
-        # Utilisation de st.columns pour diviser l'espace d'affichage
-        col_table, espace, col_graph = st.columns([1.5, 0.2, 2])
+            with col_suppr:
+                st.markdown("#### Archivage d'un ARC")
+                arc_options = arc_df['ARC'].dropna().astype(str).tolist()
+                arc_to_delete = st.selectbox("Choisir un ARC à archiver", sorted(arc_options))
+                if st.button("Archiver l'ARC sélectionné"):
+                    arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
+                    st.success(f"ARC '{arc_to_delete}' archivé avec succès.")
+                    st.rerun()
 
-        with col_table:
-            st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
+            with col_modif:
+                st.markdown("#### Gestion des mots de passe")
+                for i, row in arc_df.iterrows():
+                    with st.expander(f"{row['ARC']}"):
+                        new_mdp = st.text_input(f"Nouveau mot de passe", value=row['MDP'], key=f"mdp_{i}")
+                        # Mettre à jour le DataFrame en session_state si le mot de passe change
+                        if new_mdp != row['MDP']:
+                            arc_df.at[i, 'MDP'] = new_mdp
+                # Bouton pour sauvegarder les modifications
+                if st.button('Sauvegarder les modifications'):
+                    # Utilisez ici votre fonction de sauvegarde des données
+                    save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
+                    st.success('Modifications sauvegardées avec succès.')
+                    st.rerun()
+    # ----------------------------------------------------------------------------------------------------------
+        with tab2:
+            study_df = load_study_info()
+
+            col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
+            with col_ajout:
+                st.markdown("#### Ajout d'une nouvelle étude")
+                new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
+                new_study_arc_principal = st.text_input("ARC principal", key="new_study_arc_principal")
+                new_study_arc_backup = st.text_input("ARC de backup (optionnel)", key="new_study_arc_backup")
+
+                if st.button("Ajouter l'étude"):
+                    if new_study_name and new_study_arc_principal:  # Vérification minimale
+                        # Ajout de la nouvelle étude
+                        study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
+                                                 STUDY=new_study_name, 
+                                                 ARC=new_study_arc_principal, 
+                                                 ARC_BACKUP=new_study_arc_backup if new_study_arc_backup else "")
+                        st.success(f"Nouvelle étude '{new_study_name}' ajoutée avec succès.")
+                        st.rerun()
+                    else:
+                        st.error("Le nom de l'étude et l'ARC principal sont requis.")        
+
+            with col_suppr:
+                st.markdown("#### Archivage d'une étude")
+                study_options = study_df['STUDY'].dropna().astype(str).tolist()
+                study_to_delete = st.selectbox("Choisir une étude à archiver", sorted(study_options))
+                if st.button("Archiver l'étude sélectionnée"):
+                    study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
+                    st.success(f"L'étude '{study_to_delete}' est archivée avec succès.")
+                    st.rerun()
+
+            with col_modif:
+                st.markdown("#### Affectation des études")
+                arc_options = arc_df['ARC'].dropna().astype(str).tolist()
+                arc_options = sorted(arc_options) + ['Aucun']  # Remplace 'nan' par 'Aucun'
+
+                for i, row in study_df.iterrows():
+                    with st.expander(f"{row['STUDY']}"):
+                        # Trouvez l'index de l'ARC principal actuel dans les options, en traitant 'nan' comme 'Aucun'
+                        arc_principal_current = 'Aucun' if pd.isna(row['ARC']) else row['ARC']
+                        arc_principal_index = arc_options.index(arc_principal_current) if arc_principal_current in arc_options else len(arc_options) - 1
+                        # Sélectionnez l'ARC principal avec l'index trouvé
+                        new_arc_principal = st.selectbox(f"ARC Principal pour {row['STUDY']}", arc_options, index=arc_principal_index, key=f"principal_{i}")
+                        
+                        # Trouvez l'index de l'ARC de secours actuel dans les options, en traitant 'nan' comme 'Aucun'
+                        arc_backup_current = 'Aucun' if pd.isna(row['ARC_BACKUP']) else row['ARC_BACKUP']
+                        arc_backup_index = arc_options.index(arc_backup_current) if arc_backup_current in arc_options else len(arc_options) - 1
+                        # Sélectionnez l'ARC de secours avec l'index trouvé
+                        new_arc_backup = st.selectbox(f"ARC Backup pour {row['STUDY']}", arc_options, index=arc_backup_index, key=f"backup_{i}", help="Optionnel")
+
+                        # Avant de sauvegarder, remplacez 'Aucun' par np.nan
+                        study_df.at[i, 'ARC'] = np.nan if new_arc_principal == 'Aucun' else new_arc_principal
+                        study_df.at[i, 'ARC_BACKUP'] = np.nan if new_arc_backup == 'Aucun' else new_arc_backup
+
+
+                # Bouton global pour sauvegarder toutes les modifications
+                if st.button('Sauvegarder les modifications', key=19):
+                    save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
+                    st.success('Modifications sauvegardées avec succès.')
+                    st.rerun() 
+
+    # ----------------------------------------------------------------------------------------------------------
+        with tab3:
+            col_arc, col_year, espace1, espace2 = st.columns(4)
+
+            with col_arc:
+                arc = st.selectbox("Choix de l'ARC", list(ARC_PASSWORDS.keys()), key=2)
+
+            with col_year:
+                year_choice = st.selectbox("Année", ANNEES, key=3, index=ANNEES.index(datetime.datetime.now().year))
+
+            # I. Chargement des données
+            df_data = load_data(arc)
+            previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+
+            associated_studies = df_data['STUDY'].unique().tolist()
+            filtered_studies_df = study_df[study_df['STUDY'].isin(associated_studies)]
+            associated_studies = filtered_studies_df['STUDY'].unique().tolist()
+
+            # Liste des noms de mois
+            month_names = MONTHS
+
+            # II. Interface utilisateur pour la sélection de l'année, du mois et de la semaine
+            col_week, espace, col_month = st.columns([1, 0.25, 1])
+            with col_week:
+                week_choice = st.slider("Semaine", 1, 52, current_week, key=4)
+            with col_month:
+                # Assurez-vous que le choix du mois utilise une clé différente
+                selected_month_name = st.select_slider("Mois", options=month_names, 
+                                value=month_names[current_month - 1], key=6)
+                # Convertir le nom du mois sélectionné en numéro
+                month_choice = month_names.index(selected_month_name) + 1
+
+            # Filtrage des données pour le tableau de la semaine
+            filtered_week_df = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
+
+            # Filtrage des données pour le tableau du mois
+            first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
+            last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
+            start_week = first_day_of_month.isocalendar()[1]
+            end_week = last_day_of_month.isocalendar()[1]
+            filtered_month_df = df_data[(df_data['YEAR'].astype(int) == year_choice) & 
+                                (df_data['WEEK'].astype(int) >= start_week) & 
+                                (df_data['WEEK'].astype(int) <= end_week)]
+
+
+            # Convertir certaines colonnes en entiers pour les deux tableaux
+            filtered_week_df[TIME_INT_CAT] = filtered_week_df[TIME_INT_CAT].astype(int)
+            filtered_month_df[TIME_INT_CAT] = filtered_month_df[TIME_INT_CAT].astype(int)
+
+
+            # Utilisation de la fonction pour les données hebdomadaires
+            with col_week:
+                process_and_display_data(filtered_week_df, "semaine", week_choice)
+
+            # Utilisation de la fonction pour les données mensuelles
+            with col_month:
+                process_and_display_data(filtered_month_df, "mois", selected_month_name)
+
+            st.write("---")
+
+            # Selection des études avec multiselect
+            sel_studies = st.multiselect("Choisir une ou plusieurs études", options=associated_studies, default=associated_studies, key=10)
+            num_studies = len(sel_studies)
+
+            # Calculer le nombre de lignes nécessaires pour deux colonnes
+            nrows = (num_studies + 1) // 2 if num_studies % 2 else num_studies // 2
+
+            # Créer les colonnes principales pour les semaines et les mois
+            col_week, col_month = st.columns(2)
+
+            # Générer les graphiques pour la semaine dans la colonne de gauche
+            with col_week:
+                generate_charts_for_time_period(filtered_week_df, sel_studies, week_choice, "la semaine")
+         
+            # Répéter la même structure pour le mois dans la colonne de droite
+            with col_month:
+                generate_charts_for_time_period(filtered_month_df, sel_studies, selected_month_name, "")
+
+    # ----------------------------------------------------------------------------------------------------------
+        with tab4:
+            arcs = list(ARC_PASSWORDS.keys())
+
+            previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+
+            # Utiliser current_year au lieu de 2024 directement
+            last_5_weeks = [(current_week - i - 1) % 52 + 1 for i in range(5)]
+            all_weeks_current_year = np.arange(1, 53)  # Toutes les semaines pour l'année courante
+            dfs = {}  # Pour stocker les DataFrames
+
+            for arc in arcs:
+                if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
+                    try:
+                        df_arc = load_data(arc)
+                        df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
+                        df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
+                        
+                        # Préparer un DataFrame avec toutes les semaines pour les 5 dernières semaines avec des valeurs par défaut à 0
+                        df_all_last_5_weeks = pd.DataFrame({'YEAR': current_year, 'WEEK': last_5_weeks, 'Total Time': 0}).merge(
+                            df_arc[(df_arc['YEAR'] == current_year) & (df_arc['WEEK'].isin(last_5_weeks))],
+                            on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
+                        df_all_last_5_weeks['Total Time'] = df_all_last_5_weeks[['Total Time', 'Total Time_y']].max(axis=1)
+                        df_all_last_5_weeks.drop(columns=['Total Time_y'], inplace=True)
+                        
+                        # Préparer un DataFrame pour toutes les semaines de l'année courante avec des valeurs par défaut à 0
+                        df_all_current_year = pd.DataFrame({'YEAR': current_year, 'WEEK': all_weeks_current_year, 'Total Time': 0}).merge(
+                            df_arc[df_arc['YEAR'] == current_year],
+                            on=['YEAR', 'WEEK'], how='left', suffixes=('', '_y')).fillna(0)
+                        df_all_current_year['Total Time'] = df_all_current_year[['Total Time', 'Total Time_y']].max(axis=1)
+                        df_all_current_year.drop(columns=['Total Time_y'], inplace=True)
+                        
+                        dfs[arc] = {'last_5_weeks': df_all_last_5_weeks, 'current_year': df_all_current_year}
+                    except:
+                        pass
+                else:
+                    st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
+
+            col_month, col_year = st.columns(2)
             
-            # Commencer par un header de Markdown pour le tableau
-            markdown_table = "Catégorie | Heures passées\n:- | -:\n"
-            
-            # Ajouter chaque catégorie et le temps correspondant dans le format Markdown
-            for category, hours in total_time_by_category.items():
-                markdown_table += f"{category} | {hours:}\n"
-            
-            # Afficher le tableau formaté en Markdown
-            st.markdown(markdown_table)
+            # Pour le graphique des 5 dernières semaines
+            with col_month:
+                generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire", mode='last_5_weeks')
 
-        with col_graph:
-            # Préparation et affichage du graphique en camembert dans la deuxième colonne
-            fig, ax = plt.subplots()
-            # Assurez-vous que total_time_by_category est défini avant cette ligne
-            total_time_by_category = total_time_by_category[total_time_by_category > 0]
-            if total_time_by_category.sum() > 0:
-                plot_pie_chart_on_ax(total_time_by_category, f"Répartition du temps par catégorie pour l'étude {study_choice}", ax)
-            else:
-                ax.text(0.5, 0.5, f"Aucune donnée disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes)  # Correction de la référence à la variable de choix d'étude et positionnement
-                ax.set_axis_off()  # Masquer les axes s'il n'y a pas de données
-            st.pyplot(fig)
-            
-        st.write("---")
-        col_arc, col_scr, col_rand= st.columns([1, 1, 1])
+                    # Pour le graphique de l'année en cours
+            with col_year:
+                generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
 
-        with col_arc:
-            st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
-            
-            # Grouper les données par ARC et calculer le total
-            total_time_by_arc = filtered_df_by_study.groupby('ARC')[TIME_INT_CAT].sum().sum(axis=1)
-            
-            # Vérifier si le DataFrame n'est pas vide
-            if not total_time_by_arc.empty:
-                # Option 1: Afficher sous forme de tableau avec Markdown
-                markdown_table = "ARC | Heures Totales\n:- | -:\n"
-                for arc, total_hours in total_time_by_arc.items():
-                    markdown_table += f"{arc} | {total_hours:.2f}\n"
+    # ----------------------------------------------------------------------------------------------------------
+        with tab5:
+            # Sélection d'une étude
+            study_names = load_all_study_names(BUCKET_NAME)
+            study_choice = st.selectbox("Choisissez votre étude", study_names)
+
+            # Chargement et combinaison des données de tous les ARCs
+            all_arcs_df = pd.DataFrame()
+            for arc in ARC_PASSWORDS.keys():
+                if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
+                    try:
+                        df_arc = load_data(arc)
+                        df_arc['ARC'] = arc
+                        all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+                    except:
+                        pass
+
+            # Filtrage des données par étude sélectionnée
+            filtered_df_by_study = all_arcs_df[all_arcs_df['STUDY'] == study_choice]
+
+            # Assurez-vous que les colonnes d'intérêt sont de type numérique pour le calcul
+            filtered_df_by_study[TIME_INT_CAT] = filtered_df_by_study[TIME_INT_CAT].apply(pd.to_numeric, errors='coerce')
+
+            # Calculer le temps total passé par catégorie d'activité pour l'étude sélectionnée
+            total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
+
+
+            # Utilisation de st.columns pour diviser l'espace d'affichage
+            col_table, espace, col_graph = st.columns([1.5, 0.2, 2])
+
+            with col_table:
+                st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
+                
+                # Commencer par un header de Markdown pour le tableau
+                markdown_table = "Catégorie | Heures passées\n:- | -:\n"
+                
+                # Ajouter chaque catégorie et le temps correspondant dans le format Markdown
+                for category, hours in total_time_by_category.items():
+                    markdown_table += f"{category} | {hours:}\n"
+                
+                # Afficher le tableau formaté en Markdown
                 st.markdown(markdown_table)
-            else:
-                st.write("Aucune donnée disponible pour cette étude.")
-        with col_scr:
-            screened_pat = int(filtered_df_by_study['NB_PAT_SCR'].sum())
-            st.metric(label="Nombre total de patients inclus", value=screened_pat)
 
-        with col_rand:
-            rando_pat = int(filtered_df_by_study['NB_PAT_RAN'].sum())
-            st.metric(label="Nombre total de patients randomisés", value=rando_pat)
+            with col_graph:
+                # Préparation et affichage du graphique en camembert dans la deuxième colonne
+                fig, ax = plt.subplots()
+                # Assurez-vous que total_time_by_category est défini avant cette ligne
+                total_time_by_category = total_time_by_category[total_time_by_category > 0]
+                if total_time_by_category.sum() > 0:
+                    plot_pie_chart_on_ax(total_time_by_category, f"Répartition du temps par catégorie pour l'étude {study_choice}", ax)
+                else:
+                    ax.text(0.5, 0.5, f"Aucune donnée disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes)  # Correction de la référence à la variable de choix d'étude et positionnement
+                    ax.set_axis_off()  # Masquer les axes s'il n'y a pas de données
+                st.pyplot(fig)
+                
+            st.write("---")
+            col_arc, col_scr, col_rand= st.columns([1, 1, 1])
 
-# ----------------------------------------------------------------------------------------------------------
-    with tab6:
-        study_df = load_study_info()
-        month_names = MONTHS
-        previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
+            with col_arc:
+                st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
+                
+                # Grouper les données par ARC et calculer le total
+                total_time_by_arc = filtered_df_by_study.groupby('ARC')[TIME_INT_CAT].sum().sum(axis=1)
+                
+                # Vérifier si le DataFrame n'est pas vide
+                if not total_time_by_arc.empty:
+                    # Option 1: Afficher sous forme de tableau avec Markdown
+                    markdown_table = "ARC | Heures Totales\n:- | -:\n"
+                    for arc, total_hours in total_time_by_arc.items():
+                        markdown_table += f"{arc} | {total_hours:.2f}\n"
+                    st.markdown(markdown_table)
+                else:
+                    st.write("Aucune donnée disponible pour cette étude.")
+            with col_scr:
+                screened_pat = int(filtered_df_by_study['NB_PAT_SCR'].sum())
+                st.metric(label="Nombre total de patients inclus", value=screened_pat)
 
-        col_year, col_month, espace = st.columns([1, 3, 3])
-        with col_year:
-            year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
-        with col_month:
-            # Assurez-vous que le choix du mois utilise une clé différente
-            selected_month_name = st.select_slider("Mois", options=month_names, 
-                            value=month_names[current_month - 1], key=16)
-            # Convertir le nom du mois sélectionné en numéro
-            month_choice = month_names.index(selected_month_name) + 1
+            with col_rand:
+                rando_pat = int(filtered_df_by_study['NB_PAT_RAN'].sum())
+                st.metric(label="Nombre total de patients randomisés", value=rando_pat)
 
-        all_arcs_df = pd.DataFrame()
-        for arc in ARC_PASSWORDS.keys():
-            if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
-                try:
-                    df_arc = load_data(arc)
-                    df_arc['ARC'] = arc
-                    all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
-                except:
-                    pass
+    # ----------------------------------------------------------------------------------------------------------
+        with tab6:
+            study_df = load_study_info()
+            month_names = MONTHS
+            previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
-        # Filtrage des données pour le tableau du mois
-        first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
-        last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
-        start_week = first_day_of_month.isocalendar()[1]
-        end_week = last_day_of_month.isocalendar()[1]
-        filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
-                                    (all_arcs_df['WEEK'] >= start_week) & 
-                                    (all_arcs_df['WEEK'] <= end_week)]
+            col_year, col_month, espace = st.columns([1, 3, 3])
+            with col_year:
+                year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
+            with col_month:
+                # Assurez-vous que le choix du mois utilise une clé différente
+                selected_month_name = st.select_slider("Mois", options=month_names, 
+                                value=month_names[current_month - 1], key=16)
+                # Convertir le nom du mois sélectionné en numéro
+                month_choice = month_names.index(selected_month_name) + 1
 
-        df_activities_month = filtered_month_df.groupby('STUDY')[TIME_INT_CAT].sum()
-        df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
-        df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
+            all_arcs_df = pd.DataFrame()
+            for arc in ARC_PASSWORDS.keys():
+                if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
+                    try:
+                        df_arc = load_data(arc)
+                        df_arc['ARC'] = arc
+                        all_arcs_df = pd.concat([all_arcs_df, df_arc], ignore_index=True)
+                    except:
+                        pass
 
-        filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
-        df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
+            # Filtrage des données pour le tableau du mois
+            first_day_of_month = datetime.datetime(year_choice, month_choice, 1)
+            last_day_of_month = datetime.datetime(year_choice, month_choice + 1, 1) - datetime.timedelta(days=1)
+            start_week = first_day_of_month.isocalendar()[1]
+            end_week = last_day_of_month.isocalendar()[1]
+            filtered_month_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice) & 
+                                        (all_arcs_df['WEEK'] >= start_week) & 
+                                        (all_arcs_df['WEEK'] <= end_week)]
 
-        col_graph1, col_graph2 = st.columns([3, 3])
-        with col_graph1:
-            create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
-        with col_graph2:
-            df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
-            create_bar_chart(df_patient_included_month, "Nombre d'inclusion", selected_month_name, 'NB_PAT_SCR')
-        
-        metrics_year, metrics_month, metrics_suivi = st.columns([3, 3, 3])
-        with metrics_year:
-            nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
-            st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
+            df_activities_month = filtered_month_df.groupby('STUDY')[TIME_INT_CAT].sum()
+            df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
+            df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
 
-        with metrics_month: 
-            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
-            st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
+            filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]
+            df_patient_included_year = filtered_year_df.groupby('STUDY').sum()
 
-        with metrics_suivi:
-            nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
-            nb_eos = int(df_patient_included_month['NB_EOS'].sum())
-            st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
+            col_graph1, col_graph2 = st.columns([3, 3])
+            with col_graph1:
+                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
+            with col_graph2:
+                df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
+                create_bar_chart(df_patient_included_month, "Nombre d'inclusions", selected_month_name, 'NB_PAT_SCR')
+            
+            metrics_year, metrics_month, metrics_suivi = st.columns([3, 3, 3])
+            with metrics_year:
+                nb_incl = int(df_patient_included_year['NB_PAT_SCR'].sum())
+                st.metric(label=f"Nombre total de patients inclus en {year_choice}", value=nb_incl)
+
+            with metrics_month: 
+                nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+                st.metric(label=f"Nombre total de patients inclus en {selected_month_name} {year_choice}", value=nb_incl)
+
+            with metrics_suivi:
+                nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
+                nb_eos = int(df_patient_included_month['NB_EOS'].sum())
+                st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
