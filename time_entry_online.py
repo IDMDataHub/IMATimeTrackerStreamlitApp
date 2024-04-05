@@ -10,6 +10,7 @@ import os
 import boto3
 from io import StringIO, BytesIO
 
+
 #####################################################################
 # =========================== CONSTANTES ========================== #
 #####################################################################
@@ -51,6 +52,21 @@ s3_client = boto3.client(
 )
 
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
+     """
+    Charge un fichier CSV depuis un bucket S3 AWS en utilisant boto3, puis le lit dans un DataFrame pandas.
+
+    Parameters:
+    - bucket_name (str): Nom du bucket S3 où se trouve le fichier.
+    - file_name (str): Nom du fichier à charger depuis le bucket S3.
+    - sep (str, optional): Séparateur de champ dans le fichier CSV. Par défaut, c'est ';'.
+    - encoding (str, optional): Encodage du fichier CSV. Par défaut, c'est 'utf-8'.
+
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les données du fichier CSV.
+
+    Raises:
+    - Exception: Relève une exception si le chargement du fichier échoue pour une raison quelconque.
+    """
     # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     body = obj['Body'].read().decode(encoding)
@@ -60,6 +76,22 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     return data
 
 def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
+    """
+    Sauvegarde un DataFrame pandas dans un fichier CSV sur un bucket S3 AWS en utilisant boto3.
+
+    Parameters:
+    - df (pandas.DataFrame): Le DataFrame à sauvegarder.
+    - bucket_name (str): Le nom du bucket S3 où le fichier sera sauvegardé.
+    - file_name (str): Le nom sous lequel le fichier CSV sera sauvegardé dans le bucket S3.
+    - sep (str, optional): Le séparateur de champ à utiliser dans le fichier CSV. Par défaut, c'est ';'.
+    - encoding (str, optional): L'encodage du fichier CSV. Par défaut, c'est 'utf-8'.
+
+    Returns:
+    None
+
+    Raises:
+    - Exception: Relève une exception si la sauvegarde échoue pour une raison quelconque.
+    """
     # Convertir le DataFrame en CSV
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False, sep=sep, encoding=encoding)
@@ -71,6 +103,19 @@ def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 def load_arc_passwords():
+    """
+    Charge les mots de passe depuis un fichier CSV dans S3 en tentant d'abord avec l'encodage UTF-8,
+    puis avec l'encodage Latin1 en cas d'échec d'encodage.
+
+    Parameters:
+    None
+
+    Returns:
+    - dict: Un dictionnaire avec les ARC comme clés et les mots de passe correspondants comme valeurs.
+
+    Raises:
+    None
+    """
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
@@ -91,11 +136,27 @@ keys_df_quantity = ['YEAR', 'WEEK', 'STUDY'] + list(COLUMN_CONFIG.keys())[list(C
 column_config_df_time = {k: COLUMN_CONFIG[k] for k in keys_df_time}
 column_config_df_quantity = {k: COLUMN_CONFIG[k] for k in keys_df_quantity}
 
+
 #####################################################################
 # ==================== FONCTIONS D'ASSISTANCES ==================== #
 #####################################################################
+
+# ========================================================================================================================================
+# CHARGEMENT DE DONNEES
 def load_data(arc):
-    file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
+    """
+    Charge les données d'un ARC spécifique depuis un fichier CSV situé dans un bucket S3.
+
+    Parameters:
+    - arc (str): Identifiant de l'ARC pour lequel charger les données.
+
+    Returns:
+    - pandas.DataFrame: DataFrame contenant les données chargées pour l'ARC spécifié.
+
+    Raises:
+    - UnicodeDecodeError: Relève une exception si un problème d'encodage survient lors du chargement des données.
+    """
+    file_name = f"Time_{arc}.csv" # Nom du fichier dans le bucket S3
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
@@ -103,20 +164,99 @@ def load_data(arc):
         # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
-def authenticate_user(arc, password_entered):
-    return ARC_PASSWORDS.get(arc) == password_entered.lower()
+def load_time_data(arc, week):
+    """
+    Charge les données de temps pour un ARC spécifique et une semaine donnée à partir d'un fichier CSV stocké dans S3.
 
-def calculate_weeks():
-    current_date = datetime.datetime.now()
-    current_week = current_date.isocalendar()[1]
-    previous_week = current_week - 1 if current_week > 1 else 52
-    two_weeks_ago = previous_week - 1 if previous_week > 1 else 52
-    next_week = current_week + 1 if current_week < 52 else 1
-    current_year = current_date.year
-    return two_weeks_ago, previous_week, current_week, next_week, current_year
+    Parameters:
+    - arc (str): L'identifiant de l'ARC pour lequel charger les données.
+    - week (int): Le numéro de la semaine pour laquelle les données doivent être chargées.
 
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les données de temps filtrées pour l'ARC et la semaine spécifiés.
+    Si une erreur survient lors du chargement, un DataFrame vide est retourné.
+
+    Raises:
+    - Exception: Relève une exception si une erreur survient lors du chargement des données depuis S3.
+    """
+    file_name = f"Time_{arc}.csv" # Nom du fichier dans le bucket S3
+    
+    # Tentative de chargement du fichier depuis S3
+    try:
+        df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
+        # Filtrer les données pour la semaine spécifiée
+        return df[df['WEEK'] == week]
+    except Exception as e:
+        # Gestion des erreurs, par exemple si le fichier n'existe pas
+        print(f"Erreur lors du chargement des données depuis S3 : {e}")
+        return pd.DataFrame()
+
+def load_assigned_studies(arc):
+    """
+    Charge la liste des études assignées à un ARC spécifique depuis un fichier CSV stocké dans S3.
+
+    Parameters:
+    - arc (str): L'identifiant de l'ARC pour lequel les études assignées doivent être chargées.
+
+    Returns:
+    - list: Une liste contenant les noms des études assignées à l'ARC spécifié.
+
+    Raises:
+    None
+    """
+    file_name = "STUDY.csv" # Nom du fichier dans le bucket S3
+    
+    # Chargement du fichier depuis S3
+    df_study = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
+    
+    # Filtrage pour obtenir les études assignées à l'ARC spécifié
+    assigned_studies = df_study[(df_study['ARC'] == arc) | (df_study['ARC_BACKUP'] == arc)]
+    
+    return assigned_studies['STUDY'].tolist()
+
+def load_weekly_data(arc, week):
+    """
+    Charge les données hebdomadaires pour un ARC spécifique et une semaine donnée à partir d'un fichier CSV stocké dans S3.
+
+    Parameters:
+    - arc (str): L'identifiant de l'ARC pour lequel charger les données hebdomadaires.
+    - week (int): Le numéro de la semaine pour laquelle les données doivent être chargées.
+
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les données hebdomadaires filtrées pour l'ARC et la semaine spécifiés.
+    Si une erreur survient lors du chargement, un DataFrame vide est retourné.
+
+    Raises:
+    - Exception: Relève une exception si une erreur survient lors du chargement des données depuis S3.
+    """
+    file_name = f"Ongoing_{arc}.csv" # Construit le nom du fichier basé sur l'ARC
+    
+    # Tentative de chargement du fichier depuis S3
+    try:
+        df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
+        # Filtrer les données pour la semaine spécifiée et retourner le DataFrame
+        return df[df['WEEK'] == week]
+    except Exception as e:
+        # En cas d'erreur, par exemple si le fichier n'existe pas, retourner un DataFrame vide
+        print(f"Erreur lors du chargement des données depuis S3 : {e}")
+        return pd.DataFrame()
+
+# ========================================================================================================================================
+# SAUVEGARDE
 def save_data(df, arc):
-    # Création du chemin complet du fichier dans le bucket S3
+    """
+    Sauvegarde les données d'un DataFrame dans un fichier CSV spécifique à un ARC sur S3.
+
+    Parameters:
+    - df (pandas.DataFrame): Le DataFrame contenant les données à sauvegarder.
+    - arc (str): L'identifiant de l'ARC auquel les données sont associées.
+
+    Returns:
+    None
+
+    Raises:
+    - Exception: Relève une exception si la sauvegarde échoue pour une raison quelconque.
+    """
     file_name = f"Time_{arc}.csv"
     
     # Conversion du DataFrame en chaîne CSV
@@ -129,20 +269,87 @@ def save_data(df, arc):
     # Envoi du contenu CSV au bucket S3
     s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
-def load_time_data(arc, week):
-    file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
+# ========================================================================================================================================
+# GRAPH ET AFFICHAGE
+def display_glossary(column_config):
+    """
+    Affiche un glossaire des termes et descriptions à partir d'une configuration de colonnes, en utilisant Streamlit.
+
+    Parameters:
+    - column_config (dict): Un dictionnaire contenant les configurations des colonnes, où chaque clé représente un terme 
+      et chaque valeur est un dictionnaire avec des clés comme 'label' et 'description' pour ce terme.
+
+    Returns:
+    None
+
+    Raises:
+    None
     
-    # Tentative de chargement du fichier depuis S3
-    try:
-        df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
-        # Filtrer les données pour la semaine spécifiée
-        return df[df['WEEK'] == week]
-    except Exception as e:
-        # Gestion des erreurs, par exemple si le fichier n'existe pas
-        print(f"Erreur lors du chargement des données depuis S3 : {e}")
-        return pd.DataFrame()
+    Utilise Streamlit pour rendre le glossaire sous forme de HTML.
+    """
+    glossary_html = "<div style='margin-left: 10px;'>"
+    for term, config in column_config.items():
+        label = config["label"]
+        description = config.get("description", "Description non fournie")
+        glossary_html += f"<b>{label}</b> : {description}<br>"
+    glossary_html += "</div>"
+    st.markdown(glossary_html, unsafe_allow_html=True)
+
+# ========================================================================================================================================
+# CALCULS
+def authenticate_user(arc, password_entered):
+    """
+    Vérifie si le mot de passe saisi correspond au mot de passe de l'ARC dans la base de données.
+
+    Parameters:
+    - arc (str): L'identifiant de l'ARC.
+    - password_entered (str): Le mot de passe saisi par l'utilisateur.
+
+    Returns:
+    - bool: Retourne True si le mot de passe correspond, sinon False.
+
+    Raises:
+    None
+    """
+    return ARC_PASSWORDS.get(arc) == password_entered.lower()
+
+def calculate_weeks():
+    """
+    Calcule les numéros des semaines actuelle, précédente, suivante, et deux semaines avant, ainsi que l'année en cours.
+
+    Parameters:
+    None
+
+    Returns:
+    - tuple: Contient les numéros des deux semaines précédentes, de la semaine actuelle, de la semaine suivante, et de l'année en cours.
+
+    Raises:
+    None
+    """
+    current_date = datetime.datetime.now()
+    current_week = current_date.isocalendar()[1]
+    previous_week = current_week - 1 if current_week > 1 else 52
+    two_weeks_ago = previous_week - 1 if previous_week > 1 else 52
+    next_week = current_week + 1 if current_week < 52 else 1
+    current_year = current_date.year
+    return two_weeks_ago, previous_week, current_week, next_week, current_year
 
 def get_start_end_dates(year, week_number):
+    """
+    Calcule les dates de début et de fin pour une semaine donnée d'une année spécifique.
+
+    Parameters:
+    - year (int): L'année pour laquelle calculer les dates.
+    - week_number (int): Le numéro de la semaine pour laquelle calculer les dates de début et de fin.
+
+    Returns:
+    - tuple: Contient les dates de début et de fin de la semaine spécifiée.
+
+    Raises:
+    None
+    
+    Les dates sont calculées en se basant sur le système ISO de numérotation des semaines.
+    """
     # Trouver le premier jour de l'année
     first_day_of_year = datetime.datetime(year-1, 12, 31)
     first_monday_of_year = first_day_of_year + datetime.timedelta(days=(7-first_day_of_year.weekday()))
@@ -150,18 +357,24 @@ def get_start_end_dates(year, week_number):
     week_end_date = week_start_date + datetime.timedelta(days=4)
     return week_start_date, week_end_date
 
-def load_assigned_studies(arc):
-    file_name = "STUDY.csv"  # Nom du fichier dans le bucket S3
-    
-    # Chargement du fichier depuis S3
-    df_study = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
-    
-    # Filtrage pour obtenir les études assignées à l'ARC spécifié
-    assigned_studies = df_study[(df_study['ARC'] == arc) | (df_study['ARC_BACKUP'] == arc)]
-    
-    return assigned_studies['STUDY'].tolist()
-
+# ========================================================================================================================================
+# CREATION ET MODIFICATION
 def check_create_weekly_file(arc, year, week):
+    """
+    Vérifie l'existence d'un fichier hebdomadaire pour un ARC donné. Si le fichier n'existe pas,
+    crée un nouveau DataFrame avec les colonnes spécifiées et le sauvegarde sur S3.
+
+    Parameters:
+    - arc (str): L'identifiant de l'ARC.
+    - year (int): L'année concernée.
+    - week (int): Le numéro de la semaine concernée.
+
+    Returns:
+    - str or None: Le nom du fichier créé ou modifié sur S3, ou None si aucune étude n'est affectée à l'ARC.
+
+    Raises:
+    - Exception: Relève une exception si une erreur survient lors de la création ou la modification du fichier.
+    """
     file_name = f"Ongoing_{arc}.csv"
 
     try:
@@ -191,21 +404,20 @@ def check_create_weekly_file(arc, year, week):
 
     return file_name
 
-def load_weekly_data(arc, week):
-    file_name = f"Ongoing_{arc}.csv"  # Construit le nom du fichier basé sur l'ARC
-    
-    # Tentative de chargement du fichier depuis S3
-    try:
-        df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
-        # Filtrer les données pour la semaine spécifiée et retourner le DataFrame
-        return df[df['WEEK'] == week]
-    except Exception as e:
-        # En cas d'erreur, par exemple si le fichier n'existe pas, retourner un DataFrame vide
-        print(f"Erreur lors du chargement des données depuis S3 : {e}")
-        return pd.DataFrame()
-
 def delete_ongoing_file(arc):
-    file_name = f"Ongoing_{arc}.csv"  # Construit le nom du fichier basé sur l'ARC
+    """
+    Supprime un fichier "ongoing" spécifique à un ARC sur S3, identifié par son nom construit.
+
+    Parameters:
+    - arc (str): L'identifiant de l'ARC dont le fichier ongoing doit être supprimé.
+
+    Returns:
+    None
+
+    Raises:
+    - Exception: Relève une exception si la suppression échoue pour une raison quelconque.
+    """
+    file_name = f"Ongoing_{arc}.csv"
     
     # Suppression du fichier depuis le bucket S3
     try:
@@ -218,20 +430,28 @@ def delete_ongoing_file(arc):
         # Gestion d'erreurs potentielles lors de la suppression
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
-def display_glossary(column_config):
-    glossary_html = "<div style='margin-left: 10px;'>"
-    for term, config in column_config.items():
-        label = config["label"]
-        description = config.get("description", "Description non fournie")
-        glossary_html += f"<b>{label}</b> : {description}<br>"
-    glossary_html += "</div>"
-    st.markdown(glossary_html, unsafe_allow_html=True)
 
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
 
 def main():
+    """
+    Fonction principale exécutant l'application Streamlit. Elle configure la page, gère l'authentification des utilisateurs,
+    l'affichage et la modification des données, ainsi que la sauvegarde des modifications.
+
+    Parameters:
+    None
+
+    Returns:
+    None
+
+    Raises:
+    None
+    
+    Cette fonction orchestre les interactions de l'utilisateur avec l'interface Streamlit, y compris le chargement et
+    la modification des données, et appelle d'autres fonctions pour réaliser ces tâches.
+    """
     try:
         st.set_page_config(layout="wide", page_icon=":microscope:", page_title="I-Motion Adulte - Espace ARCs")
     except:
@@ -331,7 +551,7 @@ def main():
             data=df_time2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=column_config_df_time  # Utilisez votre configuration de colonne spécifique ici
+            column_config=column_config_df_time # Utilisez votre configuration de colonne spécifique ici
         )
 
         # Afficher la seconde partie avec sa configuration de colonne
@@ -340,7 +560,7 @@ def main():
             data=df_quantity2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=column_config_df_quantity  # Utilisez votre configuration de colonne spécifique ici
+            column_config=column_config_df_quantity # Utilisez votre configuration de colonne spécifique ici
         )
 
     else:
@@ -410,6 +630,7 @@ def main():
     st.dataframe(styled_df_time, hide_index=True, column_config=column_config_df_time)
     st.markdown('**Partie "Quantité"**')
     st.dataframe(styled_df_quantity, hide_index=True, column_config=column_config_df_quantity)
+
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
