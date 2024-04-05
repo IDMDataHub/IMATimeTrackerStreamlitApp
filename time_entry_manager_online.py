@@ -36,8 +36,8 @@ SHAPE_BOX = {
     "va": 'center', 
     "fontsize": 12, 
     "color": 'darkorange',
-    "bbox": dict(facecolor='none', edgecolor='darkorange', boxstyle='round,pad=0.5')
-}
+    "bbox": dict(facecolor='none', edgecolor='darkorange', boxstyle='round,pad=0.5')}
+
 
 #####################################################################
 # ========================= INFO GENERALES========================= #
@@ -50,7 +50,19 @@ s3_client = boto3.client(
 )
 
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
-    # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
+    """
+    Charge un fichier CSV depuis un bucket S3 spécifié et le convertit en un DataFrame pandas.
+
+    Parameters:
+    - bucket_name (str): Le nom du bucket S3 d'où charger le fichier.
+    - file_name (str): Le nom du fichier à charger.
+    - sep (str, optional): Le séparateur de colonnes dans le fichier CSV. Par défaut à ';'.
+    - encoding (str, optional): L'encodage du fichier CSV. Par défaut à 'utf-8'.
+
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les données du fichier CSV chargé.
+                         Retourne None si le chargement échoue.
+    """
     try:
         obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
         body = obj['Body'].read().decode(encoding)
@@ -72,6 +84,12 @@ viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
 category_colors = {category: color for category, color in zip(TIME_INT_CAT, viridis_palette)}
 
 def load_arc_passwords():
+    """
+    Charge les mots de passe des ARCs depuis un fichier CSV stocké dans un bucket S3.
+
+    Returns:
+    - dict: Un dictionnaire où les clés sont les noms des ARCs et les valeurs sont leurs mots de passe correspondants.
+    """
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
@@ -88,9 +106,19 @@ ARC_PASSWORDS = load_arc_passwords()
 #####################################################################
 
 # ========================================================================================================================================
-# CHARGEMENT DE DONNEE
+# CHARGEMENT DE DONNEES
 def load_data(arc):
-    file_name = f"Time_{arc}.csv"  # Nom du fichier dans le bucket S3
+    """
+    Charge les données pour un ARC spécifique depuis un fichier CSV stocké dans un bucket S3.
+
+    Parameters:
+    - arc (str): L'identifiant de l'ARC dont les données doivent être chargées.
+
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les données chargées pour l'ARC spécifié. Si une erreur d'encodage
+                         survient, tente de recharger les données avec un encodage différent.
+    """
+    file_name = f"Time_{arc}.csv"
     try:
         # Tentez de charger le fichier avec l'encodage UTF-8
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
@@ -98,8 +126,16 @@ def load_data(arc):
         # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
-
 def load_all_study_names(bucket_name):
+    """
+    Liste tous les noms uniques d'études à partir des fichiers CSV préfixés par "Time_" dans un bucket S3 spécifié.
+
+    Parameters:
+    - bucket_name (str): Le nom du bucket S3 à interroger.
+
+    Returns:
+    - list: Une liste triée de noms uniques d'études.
+    """
     # Utiliser boto3 pour lister les objets dans le bucket S3
     response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix="Time_")
     
@@ -119,18 +155,39 @@ def load_all_study_names(bucket_name):
     
     return sorted(list(unique_studies))
 
-
 def load_arc_info():
+    """
+    Charge les informations des ARCs à partir d'un fichier CSV stocké dans S3.
+
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les informations des ARCs.
+    """
     return load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
 
 def load_study_info():
+    """
+    Charge les informations des études à partir d'un fichier CSV spécifique dans S3.
+
+    Returns:
+    - pandas.DataFrame: Un DataFrame contenant les informations des études.
+    """
     # Utilisez la fonction load_csv_from_s3 avec le nom de fichier STUDY_INFO_FILE et les paramètres appropriés
     return load_csv_from_s3(BUCKET_NAME, STUDY_INFO_FILE, sep=';', encoding='utf-8')
 
 # ========================================================================================================================================
 # SAUVEGARDE
-# Sauvegarde des données modifiées
 def save_data_to_s3(bucket_name, file_name, df):
+    """
+    Sauvegarde un DataFrame dans un fichier CSV sur S3.
+
+    Parameters:
+    - bucket_name (str): Le nom du bucket S3 où le fichier sera enregistré.
+    - file_name (str): Le nom sous lequel le fichier sera enregistré.
+    - df (pandas.DataFrame): Le DataFrame à enregistrer.
+
+    Returns:
+    None
+    """
     # Convertir le DataFrame en CSV en utilisant StringIO
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
@@ -143,9 +200,20 @@ def save_data_to_s3(bucket_name, file_name, df):
 
 # ========================================================================================================================================
 # GRAPH ET AFFICHAGE
-
 def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Heures"):
-    """Crée un graphique en barres pour les données fournies avec des couleurs cohérentes."""
+    """
+    Crée et affiche un graphique en barres à partir des données fournies.
+
+    Parameters:
+    - data (pandas.DataFrame): Les données à afficher dans le graphique.
+    - title (str): Le titre du graphique.
+    - week_or_month (str): Une chaîne de caractères indiquant si le graphique concerne une semaine ou un mois.
+    - y (str, optional): La colonne des données qui sera utilisée pour les valeurs des barres. Par défaut à 'Total Time'.
+    - y_axis (str, optional): Le titre de l'axe des ordonnées. Par défaut à "Heures".
+
+    Returns:
+    None
+    """
     fig, ax = plt.subplots(figsize=(10, 4))
 
     # Définition de l'ordre des catégories et des couleurs correspondantes
@@ -167,6 +235,17 @@ def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Heures"
     st.pyplot(fig)
 
 def plot_pie_chart_on_ax(df_study_sum, titre, ax):
+    """
+    Dessine un graphique en camembert sur un axe matplotlib spécifié, représentant la somme des heures passées par tâche.
+
+    Parameters:
+    - df_study_sum (pandas.Series): Une série pandas contenant la somme des heures passées par catégorie de tâche.
+    - titre (str): Le titre du graphique en camembert.
+    - ax (matplotlib.axes.Axes): L'axe matplotlib sur lequel dessiner le graphique en camembert.
+
+    Returns:
+    None
+    """
     colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
     
     wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
@@ -178,6 +257,18 @@ def plot_pie_chart_on_ax(df_study_sum, titre, ax):
     ax.set_title(titre)
 
 def generate_charts_for_time_period(df, studies, period, period_label):
+    """
+    Génère des graphiques en camembert pour chaque étude sélectionnée sur une période donnée.
+
+    Parameters:
+    - df (pandas.DataFrame): DataFrame contenant les données à afficher.
+    - studies (list): Liste des noms d'études à inclure dans les graphiques.
+    - period (str/int): La période pour laquelle générer les graphiques (par exemple, un numéro de semaine ou un nom de mois).
+    - period_label (str): Une chaîne de caractères décrivant la période (par exemple, "Semaine" ou "Mois").
+
+    Returns:
+    None
+    """
     st.write(f"Graphiques pour {period_label} {period}")
     
     if len(studies) > 0:
@@ -207,6 +298,17 @@ def generate_charts_for_time_period(df, studies, period, period_label):
         st.warning("Aucune étude sélectionnée ou aucune donnée disponible pour les études sélectionnées.")
 
 def process_and_display_data(df, period_label, period_value):
+    """
+    Traite les données fournies et affiche un résumé et des graphiques.
+
+    Parameters:
+    - df (pandas.DataFrame): Le DataFrame contenant les données à traiter et afficher.
+    - period_label (str): Le label de la période (par exemple, "semaine" ou "mois").
+    - period_value (str/int): La valeur spécifique de la période (par exemple, numéro de la semaine ou nom du mois).
+
+    Returns:
+    None
+    """
     df_activities = df.groupby('STUDY')[TIME_INT_CAT].sum()
     df_activities['Total Time'] = df_activities.sum(axis=1)
     df_activities_sorted = df_activities.sort_values('Total Time', ascending=False)
@@ -224,12 +326,16 @@ def process_and_display_data(df, period_label, period_value):
         st.metric(label="Nombre total de visites", value=f"{total_visits}")
 
 def generate_time_series_chart(data_dict, title_prefix, mode='year'):
-    """Génère et affiche un graphique en série temporelle pour les données fournies.
-    
-    Args:
-        data_dict (dict): Dictionnaire des données à tracer.
-        title_prefix (str): Préfixe pour le titre du graphique.
-        mode (str): 'last_5_weeks' pour les 5 dernières semaines, 'year' pour l'année en cours.
+    """
+    Génère un graphique en série temporelle pour les données fournies, par ARC ou par étude.
+
+    Parameters:
+    - data_dict (dict): Un dictionnaire contenant les données à tracer, avec les noms des ARCs ou des études comme clés.
+    - title_prefix (str): Préfixe pour le titre du graphique.
+    - mode (str): Indique si le graphique doit être généré pour 'year' ou 'last_5_weeks'.
+
+    Returns:
+    None
     """
     if not data_dict:
         st.error("Aucune donnée disponible pour l'affichage du graphique.")
@@ -264,6 +370,12 @@ def generate_time_series_chart(data_dict, title_prefix, mode='year'):
 # ========================================================================================================================================
 # CALCULS
 def calculate_weeks():
+    """
+    Calcule et retourne les numéros de la semaine précédente, actuelle, suivante, l'année et le mois en cours.
+
+    Returns:
+    - tuple: Contient les numéros de la semaine précédente, actuelle, suivante, l'année en cours et le mois en cours.
+    """
     current_date = datetime.datetime.now()
     current_week = current_date.isocalendar()[1]
     previous_week = current_week - 1 if current_week > 1 else 52
@@ -276,6 +388,15 @@ def calculate_weeks():
 # CREATION ET MODIFICATION
 # Vérifie et crée un fichier pour chaque ARC dans le DataFrame
 def create_time_files_for_arcs(df):
+    """
+    Vérifie et crée, si nécessaire, un fichier vide pour chaque ARC mentionné dans un DataFrame, dans un bucket S3.
+
+    Parameters:
+    - df (pandas.DataFrame): DataFrame contenant au moins une colonne 'ARC' avec les noms des ARCs.
+
+    Returns:
+    None
+    """
     for arc_name in df['ARC'].dropna().unique():  # Assurez-vous de filtrer les valeurs NaN et de travailler avec des noms uniques
         file_name = f"Time_{arc_name}.csv"
         try:
@@ -292,6 +413,18 @@ def create_time_files_for_arcs(df):
             s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def create_ongoing_files_for_arcs(df):
+    """
+    Supprime une ligne spécifique d'un DataFrame et met à jour le fichier correspondant sur S3.
+
+    Parameters:
+    - bucket_name (str): Le nom du bucket S3 où le fichier est stocké.
+    - file_name (str): Le nom du fichier CSV sur S3 à mettre à jour.
+    - df (pandas.DataFrame): Le DataFrame à partir duquel supprimer la ligne.
+    - row_to_delete (int): L'index de la ligne à supprimer dans le DataFrame.
+
+    Returns:
+    - pandas.DataFrame: Le DataFrame après suppression de la ligne.
+    """
     for arc_name in df['ARC'].dropna().unique():  # Assurer l'unicité et l'absence de valeurs NaN
         file_name = f"Ongoing_{arc_name}.csv"
 
@@ -309,6 +442,18 @@ def create_ongoing_files_for_arcs(df):
             s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def add_row_to_df_s3(bucket_name, file_name, df, **kwargs):
+    """
+    Ajoute une nouvelle ligne à un DataFrame et sauvegarde le DataFrame mis à jour dans un fichier CSV sur S3.
+
+    Parameters:
+    - bucket_name (str): Le nom du bucket S3.
+    - file_name (str): Le nom du fichier CSV sur S3.
+    - df (pandas.DataFrame): Le DataFrame auquel ajouter la nouvelle ligne.
+    - **kwargs: Les valeurs de la nouvelle ligne à ajouter.
+
+    Returns:
+    - pandas.DataFrame: Le DataFrame mis à jour.
+    """
     # Créer une nouvelle ligne à partir des kwargs
     new_row = pd.DataFrame(kwargs, index=[0])
     # Concaténer la nouvelle ligne au DataFrame existant
@@ -325,6 +470,18 @@ def add_row_to_df_s3(bucket_name, file_name, df, **kwargs):
     return df
 
 def delete_row_s3(bucket_name, file_name, df, row_to_delete):
+    """
+    Supprime une ligne spécifique d'un DataFrame et met à jour le fichier correspondant sur S3.
+
+    Parameters:
+    - bucket_name (str): Le nom du bucket S3 où le fichier est stocké.
+    - file_name (str): Le nom du fichier CSV sur S3 à mettre à jour.
+    - df (pandas.DataFrame): Le DataFrame à partir duquel supprimer la ligne.
+    - row_to_delete (int): L'index de la ligne à supprimer dans le DataFrame.
+
+    Returns:
+    - pandas.DataFrame: Le DataFrame après suppression de la ligne.
+    """
     # Supprimer la ligne spécifiée du DataFrame
     df = df.drop(row_to_delete)
     
@@ -345,11 +502,16 @@ def delete_row_s3(bucket_name, file_name, df, row_to_delete):
 
 # Fonction principale de l'application Streamlit
 def main():
+    """
+    Fonction principale exécutant l'application Streamlit. Configure la page, gère l'authentification et affiche les différents tableaux de bord.
+
+    Returns:
+    None
+    """
     try:
         st.set_page_config(layout="wide", page_icon="📊", page_title="I-Motion Adulte - Espace Chefs de Projets")
     except:
         pass
-
 
     # Initialisation de st.session_state
     if "authenticated" not in st.session_state:
@@ -393,7 +555,6 @@ def main():
                     else:
                         st.error("Veuillez remplir le nom de l'ARC et le mot de passe.")            
 
-
             with col_suppr:
                 st.markdown("#### Archivage d'un ARC")
                 arc_options = arc_df['ARC'].dropna().astype(str).tolist()
@@ -417,6 +578,7 @@ def main():
                     save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
                     st.success('Modifications sauvegardées avec succès.')
                     st.rerun()
+
     # ----------------------------------------------------------------------------------------------------------
         with tab2:
             study_df = load_study_info()
@@ -528,7 +690,6 @@ def main():
             filtered_week_df[TIME_INT_CAT] = filtered_week_df[TIME_INT_CAT].astype(int)
             filtered_month_df[TIME_INT_CAT] = filtered_month_df[TIME_INT_CAT].astype(int)
 
-
             # Utilisation de la fonction pour les données hebdomadaires
             with col_week:
                 process_and_display_data(filtered_week_df, "semaine", week_choice)
@@ -631,7 +792,6 @@ def main():
             # Calculer le temps total passé par catégorie d'activité pour l'étude sélectionnée
             total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
 
-
             # Utilisation de st.columns pour diviser l'espace d'affichage
             col_table, espace, col_graph = st.columns([1.5, 0.2, 2])
 
@@ -693,7 +853,6 @@ def main():
             with col_calc:
                 calc_pat = rando_pat - eos_pat
                 st.metric(label="Nombre total de patients en cours de suivi", value=calc_pat)
-
 
     # ----------------------------------------------------------------------------------------------------------
         with tab6:
@@ -757,6 +916,7 @@ def main():
                 nb_incl = int(df_patient_included_month['NB_PAT_SCR'].sum())
                 nb_eos = int(df_patient_included_month['NB_EOS'].sum())
                 st.metric(label=f"Nombre total de patients suivi en {selected_month_name} {year_choice}", value=nb_incl-nb_eos)
+
 
 #####################################################################
 # ====================== LANCEMENT DE L'ALGO ====================== #
