@@ -518,7 +518,7 @@ def main():
         st.session_state.authenticated = False
 
     if not st.session_state.authenticated:
-        espace1, col_mdp, espace2 = st.columns([2, 3, 2])
+        _, col_mdp, _ = st.columns([2, 3, 2])
         with col_mdp:
             mot_de_passe_saisi = st.text_input("Entrez le mot de passe", type="password")
 
@@ -538,7 +538,7 @@ def main():
         with tab1:
             arc_df = load_arc_info()
 
-            col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
+            col_ajout, _, col_suppr, _, col_modif = st.columns([3, 1, 3, 1, 3])
             with col_ajout:
                 st.markdown("#### Ajout d'un nouvel ARC")
                 new_arc_name = st.text_input("Nom du nouvel ARC", key="new_arc_name")
@@ -583,7 +583,7 @@ def main():
         with tab2:
             study_df = load_study_info()
 
-            col_ajout, espace, col_suppr, espace, col_modif = st.columns([3, 1, 3, 1, 3])
+            col_ajout, _, col_suppr, _, col_modif = st.columns([3, 1, 3, 1, 3])
             with col_ajout:
                 st.markdown("#### Ajout d'une nouvelle étude")
                 new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
@@ -643,7 +643,7 @@ def main():
 
     # ----------------------------------------------------------------------------------------------------------
         with tab3:
-            col_arc, col_year, espace1, espace2 = st.columns(4)
+            col_arc, col_year, _, _ = st.columns(4)
 
             with col_arc:
                 arc = st.selectbox("Choix de l'ARC", list(ARC_PASSWORDS.keys()), key=2)
@@ -663,7 +663,7 @@ def main():
             month_names = MONTHS
 
             # II. Interface utilisateur pour la sélection de l'année, du mois et de la semaine
-            col_week, espace, col_month = st.columns([1, 0.25, 1])
+            col_week, _, col_month = st.columns([1, 0.25, 1])
             with col_week:
                 week_choice = st.slider("Semaine", 1, 52, current_week, key=4)
             with col_month:
@@ -793,7 +793,7 @@ def main():
             total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
 
             # Utilisation de st.columns pour diviser l'espace d'affichage
-            col_table, espace, col_graph = st.columns([1.5, 0.2, 2])
+            col_table, _, col_graph = st.columns([1.5, 0.2, 2])
 
             with col_table:
                 st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
@@ -860,7 +860,7 @@ def main():
             month_names = MONTHS
             previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
-            col_year, col_month, espace = st.columns([1, 3, 3])
+            col_year, col_month, _ = st.columns([1, 3, 3])
             with col_year:
                 year_choice = st.selectbox("Année", ANNEES, key=13, index=ANNEES.index(datetime.datetime.now().year))
             with col_month:
