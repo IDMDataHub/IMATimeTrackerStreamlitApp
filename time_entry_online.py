@@ -52,7 +52,7 @@ s3_client = boto3.client(
 )
 
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
-     """
+    """
     Charge un fichier CSV depuis un bucket S3 AWS en utilisant boto3, puis le lit dans un DataFrame pandas.
 
     Parameters:
