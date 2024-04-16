@@ -573,13 +573,16 @@ def main():
     # ----------------------------------------------------------------------------------------------------------
         with tab2:
             study_df = load_study_info()
+            arc_options = arc_df['ARC'].dropna().astype(str).tolist()
+            arc_options = sorted(arc_options) + ['Aucun']  # Replace 'nan' with 'Aucun'
 
             col_add, _, col_delete, _, col_modify = st.columns([3, 1, 3, 1, 3])
             with col_add:
                 st.markdown("#### Ajout d'une nouvelle étude")
                 new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
-                new_study_arc_principal = st.text_input("ARC principal", key="new_study_arc_principal")
-                new_study_arc_backup = st.text_input("ARC de backup (optionnel)", key="new_study_arc_backup")
+                new_study_arc_principal = st.selectbox(f"ARC Principal", arc_options, key="new_study_arc_principal")
+                new_study_arc_backup = st.selectbox("ARC de backup (optionnel)", arc_options, key=f"new_study_arc_backup", help="Optionnel")
+
 
                 if st.button("Ajouter l'étude"):
                     if new_study_name and new_study_primary_arc:  # Minimal validation
@@ -604,9 +607,6 @@ def main():
 
             with col_modify:
                 st.markdown("#### Affectation des études")
-                arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-                arc_options = sorted(arc_options) + ['Aucun']  # Replace 'nan' with 'Aucun'
-
                 for i, row in study_df.iterrows():
                     with st.expander(f"{row['STUDY']}"):
                         # Find the index of the current primary ARC in the options, treating 'nan' as 'None'
