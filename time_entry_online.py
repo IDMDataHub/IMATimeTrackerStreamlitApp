@@ -12,13 +12,12 @@ from io import StringIO, BytesIO
 
 
 #####################################################################
-# =========================== CONSTANTES ========================== #
+# =========================== CONSTANTS =========================== #
 #####################################################################
 
-# Configuration et constantes
 BUCKET_NAME = "bucketidb"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
-ANNEES = list(range(2024, 2030))
+YEARS = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
 INT_CATEGORIES = CATEGORIES[3:-1]
@@ -53,231 +52,231 @@ s3_client = boto3.client(
 
 def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     """
-    Charge un fichier CSV depuis un bucket S3 AWS en utilisant boto3, puis le lit dans un DataFrame pandas.
+    Load a CSV file from an AWS S3 bucket using boto3, then read it into a pandas DataFrame.
 
     Parameters:
-    - bucket_name (str): Nom du bucket S3 où se trouve le fichier.
-    - file_name (str): Nom du fichier à charger depuis le bucket S3.
-    - sep (str, optional): Séparateur de champ dans le fichier CSV. Par défaut, c'est ';'.
-    - encoding (str, optional): Encodage du fichier CSV. Par défaut, c'est 'utf-8'.
+    - bucket_name (str): Name of the S3 bucket where the file is located.
+    - file_name (str): Name of the file to load from the S3 bucket.
+    - sep (str, optional): Field separator in the CSV file. Default is ';'.
+    - encoding (str, optional): Encoding of the CSV file. Default is 'utf-8'.
 
     Returns:
-    - pandas.DataFrame: Un DataFrame contenant les données du fichier CSV.
+    - pandas.DataFrame: A DataFrame containing the data from the CSV file.
 
     Raises:
-    - Exception: Relève une exception si le chargement du fichier échoue pour une raison quelconque.
+    - Exception: Raises an exception if loading the file fails for any reason.
     """
-    # Utilisez boto3 pour accéder à S3 et charger le fichier spécifié
+    # Use boto3 to access S3 and load the specified file
     obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     body = obj['Body'].read().decode(encoding)
     
-    # Utilisez pandas pour lire le CSV
+    # Use pandas to read the CSV
     data = pd.read_csv(StringIO(body), sep=sep)
     return data
 
 def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
     """
-    Sauvegarde un DataFrame pandas dans un fichier CSV sur un bucket S3 AWS en utilisant boto3.
+    Save a pandas DataFrame to a CSV file on an AWS S3 bucket using boto3.
 
     Parameters:
-    - df (pandas.DataFrame): Le DataFrame à sauvegarder.
-    - bucket_name (str): Le nom du bucket S3 où le fichier sera sauvegardé.
-    - file_name (str): Le nom sous lequel le fichier CSV sera sauvegardé dans le bucket S3.
-    - sep (str, optional): Le séparateur de champ à utiliser dans le fichier CSV. Par défaut, c'est ';'.
-    - encoding (str, optional): L'encodage du fichier CSV. Par défaut, c'est 'utf-8'.
+    - df (pandas.DataFrame): The DataFrame to be saved.
+    - bucket_name (str): The name of the S3 bucket where the file will be saved.
+    - file_name (str): The name under which the CSV file will be saved in the S3 bucket.
+    - sep (str, optional): The field separator to use in the CSV file. Default is ';'.
+    - encoding (str, optional): The encoding of the CSV file. Default is 'utf-8'.
 
     Returns:
     None
 
     Raises:
-    - Exception: Relève une exception si la sauvegarde échoue pour une raison quelconque.
+    - Exception: Raises an exception if the saving fails for any reason.
     """
-    # Convertir le DataFrame en CSV
+    # Convert the DataFrame to CSV
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False, sep=sep, encoding=encoding)
     
-    # Réinitialiser le curseur du buffer au début
+    # Reset the buffer cursor to the beginning
     csv_buffer.seek(0)
     
-    # Utiliser s3_client pour sauvegarder le fichier CSV dans S3
+    # Use s3_client to save the CSV file to S3
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 def load_arc_passwords():
     """
-    Charge les mots de passe depuis un fichier CSV dans S3 en tentant d'abord avec l'encodage UTF-8,
-    puis avec l'encodage Latin1 en cas d'échec d'encodage.
+    Load passwords from a CSV file in S3, first attempting with UTF-8 encoding,
+    then with Latin1 encoding if encoding fails.
 
     Parameters:
     None
 
     Returns:
-    - dict: Un dictionnaire avec les ARC comme clés et les mots de passe correspondants comme valeurs.
+    - dict: A dictionary with ARCs as keys and corresponding passwords as values.
 
     Raises:
     None
     """
     try:
-        # Tentez de charger le fichier avec l'encodage UTF-8
+        # Attempt to load the file with UTF-8 encoding
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
-        # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
+        # If encoding error occurs, attempt to load with Latin1 encoding
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
     return dict(zip(df['ARC'], df['MDP']))
 
 ARC_PASSWORDS = load_arc_passwords()
 
-# Clés pour df1 (de YEAR à CLOTURE)
+# Keys for df1 (from YEAR to CLOTURE)
 keys_df_time = list(COLUMN_CONFIG.keys())[:list(COLUMN_CONFIG.keys()).index('CLOTURE')+1]
 
-# Clés pour df2 (YEAR, WEEK, STUDY et NB_VISITE à COMMENTAIRE)
+# Keys for df2 (YEAR, WEEK, STUDY, and NB_VISITE to COMMENTAIRE)
 keys_df_quantity = ['YEAR', 'WEEK', 'STUDY'] + list(COLUMN_CONFIG.keys())[list(COLUMN_CONFIG.keys()).index('NB_VISITE'):]
 
-# Création des configurations pour chaque partie
+# Create configurations for each part
 column_config_df_time = {k: COLUMN_CONFIG[k] for k in keys_df_time}
 column_config_df_quantity = {k: COLUMN_CONFIG[k] for k in keys_df_quantity}
 
 
 #####################################################################
-# ==================== FONCTIONS D'ASSISTANCES ==================== #
+# ===================== ASSISTANCE FUNCTIONS ====================== #
 #####################################################################
 
 # ========================================================================================================================================
-# CHARGEMENT DE DONNEES
+# DATA LOADING
 def load_data(arc):
     """
-    Charge les données d'un ARC spécifique depuis un fichier CSV situé dans un bucket S3.
+    Load data for a specific ARC from a CSV file located in an S3 bucket.
 
     Parameters:
-    - arc (str): Identifiant de l'ARC pour lequel charger les données.
+    - arc (str): Identifier of the ARC for which to load the data.
 
     Returns:
-    - pandas.DataFrame: DataFrame contenant les données chargées pour l'ARC spécifié.
+    - pandas.DataFrame: DataFrame containing the loaded data for the specified ARC.
 
     Raises:
-    - UnicodeDecodeError: Relève une exception si un problème d'encodage survient lors du chargement des données.
+    - UnicodeDecodeError: Raises an exception if an encoding problem occurs during data loading.
     """
-    file_name = f"Time_{arc}.csv" # Nom du fichier dans le bucket S3
+    file_name = f"Time_{arc}.csv"  # Name of the file in the S3 bucket
     try:
-        # Tentez de charger le fichier avec l'encodage UTF-8
+        # Attempt to load the file with UTF-8 encoding
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
-        # Si une erreur d'encodage survient, tentez de charger avec l'encodage Latin1
+        # If an encoding error occurs, attempt to load with Latin1 encoding
         return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
 def load_time_data(arc, week):
     """
-    Charge les données de temps pour un ARC spécifique et une semaine donnée à partir d'un fichier CSV stocké dans S3.
+    Load time data for a specific ARC and given week from a CSV file stored in S3.
 
     Parameters:
-    - arc (str): L'identifiant de l'ARC pour lequel charger les données.
-    - week (int): Le numéro de la semaine pour laquelle les données doivent être chargées.
+    - arc (str): The identifier of the ARC for which to load the data.
+    - week (int): The week number for which the data should be loaded.
 
     Returns:
-    - pandas.DataFrame: Un DataFrame contenant les données de temps filtrées pour l'ARC et la semaine spécifiés.
-    Si une erreur survient lors du chargement, un DataFrame vide est retourné.
+    - pandas.DataFrame: A DataFrame containing filtered time data for the specified ARC and week.
+    If an error occurs during loading, an empty DataFrame is returned.
 
     Raises:
-    - Exception: Relève une exception si une erreur survient lors du chargement des données depuis S3.
+    - Exception: Raises an exception if an error occurs during data loading from S3.
     """
-    file_name = f"Time_{arc}.csv" # Nom du fichier dans le bucket S3
+    file_name = f"Time_{arc}.csv"  # Name of the file in the S3 bucket
     
-    # Tentative de chargement du fichier depuis S3
+    # Attempt to load the file from S3
     try:
         df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
-        # Filtrer les données pour la semaine spécifiée
+        # Filter the data for the specified week
         return df[df['WEEK'] == week]
     except Exception as e:
-        # Gestion des erreurs, par exemple si le fichier n'existe pas
+        # Error handling, for example if the file does not exist
         print(f"Erreur lors du chargement des données depuis S3 : {e}")
         return pd.DataFrame()
 
 def load_assigned_studies(arc):
     """
-    Charge la liste des études assignées à un ARC spécifique depuis un fichier CSV stocké dans S3.
+    Load the list of studies assigned to a specific ARC from a CSV file stored in S3.
 
     Parameters:
-    - arc (str): L'identifiant de l'ARC pour lequel les études assignées doivent être chargées.
+    - arc (str): The identifier of the ARC for which assigned studies should be loaded.
 
     Returns:
-    - list: Une liste contenant les noms des études assignées à l'ARC spécifié.
+    - list: A list containing the names of studies assigned to the specified ARC.
 
     Raises:
     None
     """
-    file_name = "STUDY.csv" # Nom du fichier dans le bucket S3
+    file_name = "STUDY.csv"  # Name of the file in the S3 bucket
     
-    # Chargement du fichier depuis S3
+    # Load the file from S3
     df_study = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     
-    # Filtrage pour obtenir les études assignées à l'ARC spécifié
+    # Filter to get studies assigned to the specified ARC
     assigned_studies = df_study[(df_study['ARC'] == arc) | (df_study['ARC_BACKUP'] == arc)]
     
     return assigned_studies['STUDY'].tolist()
 
 def load_weekly_data(arc, week):
     """
-    Charge les données hebdomadaires pour un ARC spécifique et une semaine donnée à partir d'un fichier CSV stocké dans S3.
+    Load weekly data for a specific ARC and given week from a CSV file stored in S3.
 
     Parameters:
-    - arc (str): L'identifiant de l'ARC pour lequel charger les données hebdomadaires.
-    - week (int): Le numéro de la semaine pour laquelle les données doivent être chargées.
+    - arc (str): The identifier of the ARC for which to load weekly data.
+    - week (int): The week number for which the data should be loaded.
 
     Returns:
-    - pandas.DataFrame: Un DataFrame contenant les données hebdomadaires filtrées pour l'ARC et la semaine spécifiés.
-    Si une erreur survient lors du chargement, un DataFrame vide est retourné.
+    - pandas.DataFrame: A DataFrame containing filtered weekly data for the specified ARC and week.
+    If an error occurs during loading, an empty DataFrame is returned.
 
     Raises:
-    - Exception: Relève une exception si une erreur survient lors du chargement des données depuis S3.
+    - Exception: Raises an exception if an error occurs during data loading from S3.
     """
-    file_name = f"Ongoing_{arc}.csv" # Construit le nom du fichier basé sur l'ARC
+    file_name = f"Ongoing_{arc}.csv"  # Construct the file name based on the ARC
     
-    # Tentative de chargement du fichier depuis S3
+    # Attempt to load the file from S3
     try:
         df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
-        # Filtrer les données pour la semaine spécifiée et retourner le DataFrame
+        # Filter the data for the specified week and return the DataFrame
         return df[df['WEEK'] == week]
     except Exception as e:
-        # En cas d'erreur, par exemple si le fichier n'existe pas, retourner un DataFrame vide
+        # Error handling, for example if the file does not exist, return an empty DataFrame
         print(f"Erreur lors du chargement des données depuis S3 : {e}")
         return pd.DataFrame()
 
 # ========================================================================================================================================
-# SAUVEGARDE
+# SAVE
 def save_data(df, arc):
     """
-    Sauvegarde les données d'un DataFrame dans un fichier CSV spécifique à un ARC sur S3.
+    Save DataFrame data to a specific ARC's CSV file on S3.
 
     Parameters:
-    - df (pandas.DataFrame): Le DataFrame contenant les données à sauvegarder.
-    - arc (str): L'identifiant de l'ARC auquel les données sont associées.
+    - df (pandas.DataFrame): The DataFrame containing the data to be saved.
+    - arc (str): The identifier of the ARC to which the data is associated.
 
     Returns:
     None
 
     Raises:
-    - Exception: Relève une exception si la sauvegarde échoue pour une raison quelconque.
+    - Exception: Raises an exception if the save operation fails for any reason.
     """
     file_name = f"Time_{arc}.csv"
     
-    # Conversion du DataFrame en chaîne CSV
+    # Convert the DataFrame to a CSV string
     csv_buffer = StringIO()
     df.to_csv(csv_buffer, index=False, sep=";", encoding='utf-8')
     
-    # Réinitialisation de la position du curseur au début du buffer
+    # Reset the cursor position to the beginning of the buffer
     csv_buffer.seek(0)
     
-    # Envoi du contenu CSV au bucket S3
+    # Send the CSV content to the S3 bucket
     s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
 # ========================================================================================================================================
-# GRAPH ET AFFICHAGE
+# GRAPH AND DISPLAY
 def display_glossary(column_config):
     """
-    Affiche un glossaire des termes et descriptions à partir d'une configuration de colonnes, en utilisant Streamlit.
+    Display a glossary of terms and descriptions from a column configuration, using Streamlit.
 
     Parameters:
-    - column_config (dict): Un dictionnaire contenant les configurations des colonnes, où chaque clé représente un terme 
-      et chaque valeur est un dictionnaire avec des clés comme 'label' et 'description' pour ce terme.
+    - column_config (dict): A dictionary containing column configurations, where each key represents a term
+      and each value is a dictionary with keys like 'label' and 'description' for that term.
 
     Returns:
     None
@@ -285,7 +284,7 @@ def display_glossary(column_config):
     Raises:
     None
     
-    Utilise Streamlit pour rendre le glossaire sous forme de HTML.
+    Uses Streamlit to render the glossary as HTML.
     """
     glossary_html = "<div style='margin-left: 10px;'>"
     for term, config in column_config.items():
@@ -295,18 +294,19 @@ def display_glossary(column_config):
     glossary_html += "</div>"
     st.markdown(glossary_html, unsafe_allow_html=True)
 
+
 # ========================================================================================================================================
-# CALCULS
+# CALCULATIONS
 def authenticate_user(arc, password_entered):
     """
-    Vérifie si le mot de passe saisi correspond au mot de passe de l'ARC dans la base de données.
+    Verifies if the entered password matches the ARC's password in the database.
 
     Parameters:
-    - arc (str): L'identifiant de l'ARC.
-    - password_entered (str): Le mot de passe saisi par l'utilisateur.
+    - arc (str): The ARC's identifier.
+    - password_entered (str): The password entered by the user.
 
     Returns:
-    - bool: Retourne True si le mot de passe correspond, sinon False.
+    - bool: Returns True if the password matches, otherwise False.
 
     Raises:
     None
@@ -315,13 +315,13 @@ def authenticate_user(arc, password_entered):
 
 def calculate_weeks():
     """
-    Calcule les numéros des semaines actuelle, précédente, suivante, et deux semaines avant, ainsi que l'année en cours.
+    Calculates the current, previous, next, and two weeks ago week numbers, along with the current year.
 
     Parameters:
     None
 
     Returns:
-    - tuple: Contient les numéros des deux semaines précédentes, de la semaine actuelle, de la semaine suivante, et de l'année en cours.
+    - tuple: Contains the numbers of the two previous weeks, the current week, the next week, and the current year.
 
     Raises:
     None
@@ -336,21 +336,21 @@ def calculate_weeks():
 
 def get_start_end_dates(year, week_number):
     """
-    Calcule les dates de début et de fin pour une semaine donnée d'une année spécifique.
+    Calculates the start and end dates for a given week of a specific year.
 
     Parameters:
-    - year (int): L'année pour laquelle calculer les dates.
-    - week_number (int): Le numéro de la semaine pour laquelle calculer les dates de début et de fin.
+    - year (int): The year for which to calculate the dates.
+    - week_number (int): The week number for which to calculate the start and end dates.
 
     Returns:
-    - tuple: Contient les dates de début et de fin de la semaine spécifiée.
+    - tuple: Contains the start and end dates of the specified week.
 
     Raises:
     None
-    
-    Les dates sont calculées en se basant sur le système ISO de numérotation des semaines.
+
+    The dates are calculated based on the ISO week numbering system.
     """
-    # Trouver le premier jour de l'année
+    # Find the first day of the year
     first_day_of_year = datetime.datetime(year-1, 12, 31)
     first_monday_of_year = first_day_of_year + datetime.timedelta(days=(7-first_day_of_year.weekday()))
     week_start_date = first_monday_of_year + datetime.timedelta(weeks=week_number-1)
@@ -358,45 +358,45 @@ def get_start_end_dates(year, week_number):
     return week_start_date, week_end_date
 
 # ========================================================================================================================================
-# CREATION ET MODIFICATION
+# CREATION AND MODIFICATION
 def check_create_weekly_file(arc, year, week):
     """
-    Vérifie l'existence d'un fichier hebdomadaire pour un ARC donné. Si le fichier n'existe pas,
-    crée un nouveau DataFrame avec les colonnes spécifiées et le sauvegarde sur S3.
+    Checks the existence of a weekly file for a given ARC. If the file does not exist,
+    creates a new DataFrame with the specified columns and saves it to S3.
 
     Parameters:
-    - arc (str): L'identifiant de l'ARC.
-    - year (int): L'année concernée.
-    - week (int): Le numéro de la semaine concernée.
+    - arc (str): The ARC identifier.
+    - year (int): The relevant year.
+    - week (int): The week number.
 
     Returns:
-    - str or None: Le nom du fichier créé ou modifié sur S3, ou None si aucune étude n'est affectée à l'ARC.
+    - str or None: The name of the created or modified file on S3, or None if no studies are assigned to the ARC.
 
     Raises:
-    - Exception: Relève une exception si une erreur survient lors de la création ou la modification du fichier.
+    - Exception: Raises an exception if an error occurs during the creation or modification of the file.
     """
     file_name = f"Ongoing_{arc}.csv"
 
     try:
         df_existing = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except Exception as e:
-        # Si le fichier n'existe pas ou une autre erreur se produit, créer un nouveau DataFrame
+        # If the file does not exist or another error occurs, create a new DataFrame
         df_existing = pd.DataFrame(columns=CATEGORIES)
         
-    # Chargement des études assignées
+    # Load assigned studies
     assigned_studies = load_assigned_studies(arc)
     if assigned_studies:
-        # Filtrer pour ne garder que les études non présentes pour cette semaine et année
+        # Filter to keep only studies not present for this week and year
         existing_studies = df_existing[(df_existing['YEAR'] == year) & (df_existing['WEEK'] == week)]['STUDY']
         new_studies = [study for study in assigned_studies if study not in existing_studies.tolist()]
         
-        # Préparation des nouvelles lignes à ajouter uniquement pour les nouvelles études
+        # Prepare new rows to add only for new studies
         rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
              'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in new_studies]
-        if rows:  # S'il y a de nouvelles études à ajouter
+        if rows:  # If there are new studies to add
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
-            # Sauvegarde du DataFrame mis à jour sur S3
+            # Save the updated DataFrame to S3
             save_csv_to_s3(df_existing, BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     else:
         st.error("Aucune étude n'a été affectée. Merci de voir avec vos managers.")
@@ -404,22 +404,23 @@ def check_create_weekly_file(arc, year, week):
 
     return file_name
 
+
 def delete_ongoing_file(arc):
     """
-    Supprime un fichier "ongoing" spécifique à un ARC sur S3, identifié par son nom construit.
+    Deletes a specific "ongoing" file for an ARC on S3, identified by its constructed name.
 
     Parameters:
-    - arc (str): L'identifiant de l'ARC dont le fichier ongoing doit être supprimé.
+    - arc (str): The ARC identifier whose ongoing file needs to be deleted.
 
     Returns:
     None
 
     Raises:
-    - Exception: Relève une exception si la suppression échoue pour une raison quelconque.
+    - Exception: Raises an exception if deletion fails for any reason.
     """
     file_name = f"Ongoing_{arc}.csv"
     
-    # Suppression du fichier depuis le bucket S3
+    # Deleting the file from the S3 bucket
     try:
         response = s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_name)
         if response['ResponseMetadata']['HTTPStatusCode'] == 204:
@@ -427,18 +428,18 @@ def delete_ongoing_file(arc):
         else:
             print(f"Erreur lors de la suppression du fichier {file_name}.")
     except Exception as e:
-        # Gestion d'erreurs potentielles lors de la suppression
+        # Handling potential errors during deletion
         print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
 
 #####################################################################
-# ====================== FONCTION PRINCIPALE ====================== #
+# ========================= MAIN FUNCTION ========================= #
 #####################################################################
 
 def main():
     """
-    Fonction principale exécutant l'application Streamlit. Elle configure la page, gère l'authentification des utilisateurs,
-    l'affichage et la modification des données, ainsi que la sauvegarde des modifications.
+    Main function running the Streamlit application. It configures the page, handles user authentication,
+    data display and modification, as well as saving the changes.
 
     Parameters:
     None
@@ -449,8 +450,8 @@ def main():
     Raises:
     None
     
-    Cette fonction orchestre les interactions de l'utilisateur avec l'interface Streamlit, y compris le chargement et
-    la modification des données, et appelle d'autres fonctions pour réaliser ces tâches.
+    This function orchestrates user interactions with the Streamlit interface, including loading and
+    modifying data, and calls other functions to perform these tasks.
     """
     try:
         st.set_page_config(layout="wide", page_icon=":microscope:", page_title="I-Motion Adulte - Espace ARCs")
@@ -459,22 +460,22 @@ def main():
     st.title("I-Motion Adulte - Espace ARCs")
     st.write("---")
 
-    # Authentification de l'utilisateur
+    # User authentication
     arc = st.sidebar.selectbox("Choisissez votre ARC", list(ARC_PASSWORDS.keys()))
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe", type="password")
     
     if not authenticate_user(arc, arc_password_entered):
-        st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
+         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
     
     with st.sidebar.expander("Glossaire des catégories"):
         display_glossary(COLUMN_CONFIG)
 
-    # I. Chargement des données
+    # I. Data loading
     df_data = load_data(arc)
     two_weeks_ago, previous_week, current_week, next_week, current_year = calculate_weeks()
 
-    # II. Section pour la modification des données
+    # II. Section for data modification
     st.subheader("Entrée d'heures")
     
     week_choice2 = st.radio(
@@ -484,32 +485,32 @@ def main():
          f"Semaine en cours (Semaine {current_week})"],
         index=2)
 
-    # Récupérer la valeur sélectionnée (numéro de la semaine)
+    # Get the selected value (week number)
     selected_week = int(week_choice2.split()[-1].strip(')'))
     time_df = load_time_data(arc, selected_week)
 
     if "Semaine précédente" in week_choice2:
-        # Charger les données de la semaine précédente à partir de Time_arc.csv
+        # Load data for the previous week from Time_arc.csv
         filtered_df2 = time_df
     else:
-        # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
+        # Load data for the current week from Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
         filtered_df2 = load_weekly_data(arc, selected_week)
 
         if not time_df.empty:
             if not time_df[(time_df['YEAR'] == current_year) & (time_df['WEEK'] == current_week)].empty:
-                # Il y a des données dans time_df pour l'année et la semaine en cours
-                # Fusionner les données
+                # There is data in time_df for the current year and week
+                # Merge the data
                 merged_df = pd.merge(filtered_df2, time_df, on=['YEAR', 'WEEK', 'STUDY'], suffixes=('_ongoing', '_time'), how='outer')
-                # Récupérer les études actuellement assignées à cet ARC
+                # Retrieve studies currently assigned to this ARC
                 assigned_studies = set(load_assigned_studies(arc))
                 merged_df = merged_df[merged_df['STUDY'].isin(assigned_studies)]
-                # Remplacer les valeurs dans Ongoing avec celles de Time si elles ne sont pas 0
+                # Replace values in Ongoing with those from Time if they are not 0
                 columns_to_update = CATEGORIES[3:]
                 for col in columns_to_update:
                     merged_df[col + '_ongoing'] = merged_df.apply(
                         lambda row: row[col + '_time'] if not pd.isna(row[col + '_time']) and row[col + '_ongoing'] == 0 else row[col + '_ongoing'], axis=1)
-                # Ajouter des lignes pour les nouvelles études assignées manquantes
+                # Add rows for missing newly assigned studies
                 for study in assigned_studies:
                     if study not in merged_df['STUDY'].tolist():
                         new_row_data = {'YEAR': current_year, 'WEEK': current_week, 'STUDY': study}
@@ -519,18 +520,18 @@ def main():
                         merged_df = pd.concat([merged_df, new_row], ignore_index=True)
 
 
-                # Filtrer les colonnes pour éliminer celles avec '_time'
+                # Filter columns to eliminate those with '_time'
                 filtered_columns = [col for col in merged_df.columns if '_time' not in col]
 
-                # Créer le DataFrame final avec les colonnes filtrées
+                # Create the final DataFrame with filtered columns
                 final_df = merged_df[filtered_columns]
                 filtered_df2 = final_df.rename(columns={col + '_ongoing': col for col in columns_to_update})
 
             else:
-                # Il y a des données dans time_df, mais pas pour l'année et la semaine en cours
+                # There is data in time_df, but not for the current year and week
                 filtered_df2 = time_df
         else:
-            # time_df est complètement vide
+            # time_df is completely empty
             assigned_studies = set(load_assigned_studies(arc))
             rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
@@ -541,82 +542,82 @@ def main():
         filtered_df2['YEAR'] = filtered_df2['YEAR'].astype(str)
         filtered_df2['WEEK'] = filtered_df2['WEEK'].astype(str)
 
-        # Séparer votre DataFrame en deux selon les clés spécifiées
+        # Split your DataFrame into two based on the specified keys
         df_time2 = filtered_df2[keys_df_time]
         df_quantity2 = filtered_df2[keys_df_quantity]
 
-        # Afficher la première partie avec sa configuration de colonne
+        # Display the first part with its column configuration
         st.markdown('**Partie "Temps"**')
         df1_edited = st.data_editor(
             data=df_time2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=column_config_df_time # Utilisez votre configuration de colonne spécifique ici
+            column_config=column_config_df_time # Use your specific column configuration here
         )
 
-        # Afficher la seconde partie avec sa configuration de colonne
+        # Display the second part with its column configuration
         st.markdown('**Partie "Quantité"**')
         df2_edited = st.data_editor(
             data=df_quantity2,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=column_config_df_quantity # Utilisez votre configuration de colonne spécifique ici
+            column_config=column_config_df_quantity # Use your specific column configuration here
         )
 
     else:
         st.write("Aucune donnée disponible pour la semaine sélectionnée.")
     
     
-    # III. Bouton de sauvegarde
+    # III. Save button
     if st.button("Sauvegarder"):
 
-        # Retirer les anciennes données de la semaine sélectionnée
+        # Remove old data for the selected week
         df_data = df_data[df_data['WEEK'] != int(selected_week)]
 
-        # Assurez-vous que 'YEAR', 'WEEK', 'STUDY' sont présents dans les deux DataFrames pour l'alignement
+        # Ensure 'YEAR', 'WEEK', 'STUDY' are present in both DataFrames for alignment
         df1_edited = df1_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
         df2_edited = df2_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
 
-        # Concaténation des deux DataFrames sur l'axe des colonnes
+        # Concatenate the two DataFrames along the columns axis
         df = pd.concat([df1_edited, df2_edited], axis=1)
 
-        # Réinitialiser l'indice si nécessaire
+        # Reset index if necessary
         df.reset_index(inplace=True)
 
-        # Concaténer avec les nouvelles données
+        # Concatenate with the new data
         updated_df = pd.concat([df_data, df]).sort_index()
 
-        # Sauvegarder le DataFrame mis à jour
+        # Save the updated DataFrame
         save_data(updated_df, arc)
 
-        # Supprimer le fichier Ongoing_ARC.csv
+        # Delete the Ongoing_ARC.csv file
         delete_ongoing_file(arc)
 
         st.success("Les données ont été sauvegardées et le fichier temporaire a été supprimé.")
 
-        # Recharger la page
+        # Reload the page
         st.rerun()
 
-    # IV. Interface utilisateur pour la sélection de l'année et de la semaine
+    # IV. User interface for year and week selection
     st.write("---")
     st.subheader("Visualisation de l'historique")
     col1, col2 = st.columns([1, 3])
     with col1:
-        year_choice = st.selectbox("Année", ANNEES, index=ANNEES.index(datetime.datetime.now().year))
+        year_choice = st.selectbox("Year", YEARS, index=YEARS.index(datetime.datetime.now().year))
     with col2:
-        week_choice = st.slider("Semaine", 1, 52, current_week)
+        week_choice = st.slider("Week", 1, 52, current_week)
 
-    # Filtrage et manipulation des données
+    # Data filtering and manipulation
     filtered_df1 = df_data[(df_data['YEAR'] == year_choice) & (df_data['WEEK'] == week_choice)]
 
-    # Convertir certaines colonnes en entiers
+    # Convert certain columns to integers
     int_columns = INT_CATEGORIES
     filtered_df1[int_columns] = filtered_df1[int_columns].astype(int)
 
     df_time = filtered_df1[keys_df_time]
     df_quantity = filtered_df1[keys_df_quantity]
     
-    # Appliquer le style
+    # Apply styling
     styled_df_time = df_time.style.format({
         "YEAR": "{:.0f}",
         "WEEK": "{:.0f}"
@@ -633,7 +634,7 @@ def main():
 
 
 #####################################################################
-# ====================== LANCEMENT DE L'ALGO ====================== #
+# ========================== ALGO LAUNCH ========================== #
 #####################################################################
 
 if __name__ == "__main__":
