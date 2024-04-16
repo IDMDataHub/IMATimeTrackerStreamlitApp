@@ -580,8 +580,8 @@ def main():
             with col_add:
                 st.markdown("#### Ajout d'une nouvelle étude")
                 new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
-                new_study_arc_principal = st.selectbox(f"ARC Principal", arc_options, key="new_study_arc_principal")
-                new_study_arc_backup = st.selectbox("ARC de backup (optionnel)", arc_options, key=f"new_study_arc_backup", help="Optionnel")
+                new_study_primary_arc = st.selectbox(f"ARC Principal", arc_options, key="new_study_arc_principal")
+                new_study_backup_arc = st.selectbox("ARC de backup (optionnel)", arc_options, key=f"new_study_arc_backup", help="Optionnel")
 
 
                 if st.button("Ajouter l'étude"):
