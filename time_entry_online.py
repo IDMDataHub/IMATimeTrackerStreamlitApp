@@ -465,7 +465,7 @@ def main():
     arc_password_entered = st.sidebar.text_input(f"Entrez le mot de passe", type="password")
     
     if not authenticate_user(arc, arc_password_entered):
-         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
+        st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
     
     with st.sidebar.expander("Glossaire des catégories"):
