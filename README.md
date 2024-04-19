@@ -1,41 +1,41 @@
 
-# **IMATimeTrackerStreamlitApp**
+# IMATimeTrackerStreamlitApp
 
-## *Brève Description*
-**IMATimeTrackerStreamlitApp** est une suite d'applications Streamlit conçue pour améliorer le suivi et la gestion du temps dans un environnement professionnel. Cette suite comprend deux applications principales adaptées aux besoins spécifiques des employés et des managers : `time_entry_online.py` pour les employés et `time_entry_manager_online.py` pour les managers. Ces outils offrent une interface intuitive pour la saisie du temps, le suivi des projets et fournissent des fonctionnalités avancées de reporting et de gestion.
+## Brief Description
+**IMATimeTrackerStreamlitApp** is a suite of Streamlit applications designed to enhance time tracking and management in a professional environment. This suite includes two main applications tailored to the specific needs of employees and managers: `time_entry_online.py` for employees and `time_entry_manager_online.py` for managers. These tools provide an intuitive interface for time entry, project tracking, and feature advanced reporting and management functionalities.
 
-### Fonctionnalités de `time_entry_online.py`
-- **Authentification des Utilisateurs** : Permet une connexion sécurisée pour les employés via une interface d'authentification intégrée.
-- **Saisie et Modification du Temps** : Les employés peuvent facilement saisir et modifier le temps passé sur différents projets ou tâches.
-- **Visualisation et Édition des Données** : Offre la possibilité d'afficher le temps passé par semaine ou par année, avec des options pour visualiser et éditer les entrées historiques.
-- **Intégration avec le Stockage Cloud** : Utilise les services AWS S3 pour le stockage et la récupération sécurisée des données.
+### Features of `time_entry_online.py`
+- **User Authentication**: Allows secure login for employees through an integrated authentication interface.
+- **Time Entry and Modification**: Employees can easily enter and modify time spent on various projects or tasks.
+- **Data Viewing and Editing**: Offers the ability to view time spent by week or year, with options to view and edit historical entries.
+- **Integration with Cloud Storage**: Utilizes AWS S3 services for secure data storage and retrieval.
 
-### Fonctionnalités de `time_entry_manager_online.py`
-- **Gestion des Informations des ARCs et des Études** : Permet aux managers de gérer les informations relatives aux assistants de recherche clinique (ARCs) et aux études en cours.
-- **Suivi Avancé et Visualisation des Données** : Propose une vue détaillée du temps alloué aux différents projets, avec des tableaux et des graphiques pour un suivi approfondi.
-- **Tableaux de Bord Détaillés** : Inclut des tableaux de bord pour chaque ARC et un tableau de bord général offrant une vue d'ensemble complète.
+### Features of `time_entry_manager_online.py`
+- **Management of ARCs and Study Information**: Enables managers to manage information related to clinical research assistants (ARCs) and ongoing studies.
+- **Advanced Tracking and Data Visualization**: Provides a detailed view of time allocated to various projects, with charts and graphs for comprehensive tracking.
+- **Detailed Dashboards**: Includes dashboards for each ARC and a general dashboard providing a complete overview.
 
-## *Pour Commencer*
-Pour lancer une application, naviguez vers le répertoire contenant le script correspondant et exécutez la commande appropriée dans votre terminal :
+## Getting Started
+To launch an application, navigate to the directory containing the corresponding script and execute the appropriate command in your terminal:
 
-Pour les employés :
+For employees:
 ```bash
 streamlit run time_entry_online.py
 ```
 
-Pour les managers :
+For managers:
 ```bash
 streamlit run time_entry_manager_online.py
 ```
 
-## *Prérequis*
-- Python 3.9 ou plus récent.
-- Bibliothèques Python : `streamlit`, `pandas`, `datetime`, `locale`, `os`, `boto3`.
+## Requirements
+- Python 3.9 or newer.
+- Python Libraries: `streamlit`, `pandas`, `datetime`, `locale`, `os`, `boto3`.
 
-## *Installation*
-1. Clonez le dépôt ou téléchargez les scripts.
-2. Installez les dépendances nécessaires en utilisant la commande : `pip install streamlit pandas boto3`.
-3. Lancez l'application en suivant les instructions de la section *Pour Commencer*.
+## Installation
+1. Clone the repository or download the scripts.
+2. Install the necessary dependencies using the command: `pip install streamlit pandas boto3`.
+3. Launch the application following the instructions in the *Getting Started* section.
 
-## *Contribution*
-Les contributions à **IMATimeTrackerStreamlitApp** sont bienvenues. Pour toute correction de bug, amélioration de fonctionnalités ou suggestion, n'hésitez pas à ouvrir une issue ou une pull request sur le dépôt GitHub.
+## Contribution
+Contributions to **IMATimeTrackerStreamlitApp** are welcome. For any bug fixes, feature enhancements, or suggestions, feel free to open an issue or a pull request on the GitHub repository.
