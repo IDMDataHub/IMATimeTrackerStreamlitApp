@@ -759,6 +759,7 @@ def main():
         with tab5:
             # Study selection
             study_names = load_all_study_names(BUCKET_NAME)
+            st.write(study_names)
             study_choice = st.selectbox("Choisissez votre étude", study_names)
 
             # Loading and combining data from all ARCs
@@ -846,7 +847,6 @@ def main():
     # ----------------------------------------------------------------------------------------------------------
         with tab6:
             study_df = load_study_info()
-            st.write(study_df["STUDY"])
             month_names = MONTHS
             previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
