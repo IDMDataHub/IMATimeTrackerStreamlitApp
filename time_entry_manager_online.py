@@ -197,6 +197,22 @@ def save_data_to_s3(bucket_name, file_name, df):
     # Upload the CSV to the S3 bucket
     s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
+def convert_df_to_excel(df):
+    """
+    Convert a DataFrame to an Excel file and return as a BytesIO object.
+
+    Parameters:
+    - df (DataFrame): The DataFrame to convert.
+
+    Returns:
+    - BytesIO: The Excel file in memory.
+    """
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False, sheet_name='Studies')
+    output.seek(0)
+    return output
+
 # ========================================================================================================================================
 # GRAPH AND DISPLAY
 def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Hours"):
@@ -598,6 +614,19 @@ def main():
                             st.error("Le nom de l'étude et l'ARC principal sont requis.")
                 with col_list:
                     st.write(load_all_study_names(BUCKET_NAME))
+
+                    study_names = load_all_study_names(BUCKET_NAME)
+                    st.write(study_df[0])
+                    # study_df = pd.DataFrame(study_names, columns=['Study Name'])
+                    # excel_data = convert_df_to_excel(study_df)
+                    # st.download_button(
+                    #     label="Liste des études en cours et archivées",
+                    #     data=excel_data,
+                    #     file_name='liste_etudes.xlsx',
+                    #     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    # )
+
+
 
             with col_delete:
                 st.markdown("#### Archivage d'une étude")
