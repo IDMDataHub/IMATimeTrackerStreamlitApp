@@ -613,12 +613,9 @@ def main():
                         else:
                             st.error("Le nom de l'étude et l'ARC principal sont requis.")
                 with col_list:
-                    st.write(load_all_study_names(BUCKET_NAME))
-
                     study_names = load_all_study_names(BUCKET_NAME)
-                    st.write(type(study_names))
-                    study_df = pd.DataFrame(study_names, columns=['Study Name'])
-                    excel_data = convert_df_to_excel(study_df)
+                    study_names_df = pd.DataFrame(study_names, columns=['Study Name'])
+                    excel_data = convert_df_to_excel(study_names_df)
                     # st.download_button(
                     #     label="Liste des études en cours et archivées",
                     #     data=excel_data,
