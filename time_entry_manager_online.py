@@ -538,12 +538,15 @@ def main():
                 st.write("Mot de passe incorrect. Veuillez réessayer.")
 
     if st.session_state.authenticated:
-        # Bouton de déconnexion
-        if st.button("Se déconnecter"):
-            st.session_state.authenticated = False
-            st.rerun()
-            
-        st.title("I-Motion Adulte - Espace Chefs de Projets")
+        col_title, col_logout = st.columns([8, 1])
+
+        with col_title:
+            st.title("I-Motion Adulte - Espace Chefs de Projets")
+
+        with col_logout:
+            if st.button("Se déconnecter"):
+                st.session_state.authenticated = False
+                st.rerun()
         st.write("---")
 
         # Selection tab
