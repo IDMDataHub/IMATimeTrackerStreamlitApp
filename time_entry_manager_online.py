@@ -846,7 +846,7 @@ def main():
     # ----------------------------------------------------------------------------------------------------------
         with tab6:
             study_df = load_study_info()
-            st.write(study_df)
+            st.write(study_df["STUDY"])
             month_names = MONTHS
             previous_week, current_week, next_week, current_year, current_month = calculate_weeks()
 
