@@ -584,7 +584,7 @@ def main():
                 new_study_backup_arc = st.selectbox("ARC de backup (optionnel)", arc_options, key=f"new_study_arc_backup", help="Optionnel")
 
                 col_add, col_list = st.columns(2)
-                    with col_add:
+                with col_add:
                     if st.button("Ajouter l'étude"):
                         if new_study_name and new_study_primary_arc:  # Minimal validation
                             # Adding the new study
