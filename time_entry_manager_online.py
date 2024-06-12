@@ -616,12 +616,12 @@ def main():
                     study_names = load_all_study_names(BUCKET_NAME)
                     study_names_df = pd.DataFrame(study_names, columns=['Study Name'])
                     excel_data = convert_df_to_excel(study_names_df)
-                    # st.download_button(
-                    #     label="Liste des études en cours et archivées",
-                    #     data=excel_data,
-                    #     file_name='liste_etudes.xlsx',
-                    #     mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-                    # )
+                    st.download_button(
+                        label="Liste des études en cours et archivées",
+                        data=excel_data,
+                        file_name='liste_etudes.xlsx',
+                        mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                    )
 
 
 
