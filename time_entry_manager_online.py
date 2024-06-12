@@ -616,8 +616,7 @@ def main():
                     st.write(load_all_study_names(BUCKET_NAME))
 
                     study_names = load_all_study_names(BUCKET_NAME)
-                    st.write(study_df[0])
-                    # study_df = pd.DataFrame(study_names, columns=['Study Name'])
+                    study_df = pd.DataFrame(study_names, columns=['Study Name'])
                     # excel_data = convert_df_to_excel(study_df)
                     # st.download_button(
                     #     label="Liste des études en cours et archivées",
