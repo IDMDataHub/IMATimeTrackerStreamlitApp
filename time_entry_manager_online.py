@@ -583,18 +583,21 @@ def main():
                 new_study_primary_arc = st.selectbox(f"ARC Principal", arc_options, key="new_study_arc_principal")
                 new_study_backup_arc = st.selectbox("ARC de backup (optionnel)", arc_options, key=f"new_study_arc_backup", help="Optionnel")
 
-
-                if st.button("Ajouter l'étude"):
-                    if new_study_name and new_study_primary_arc:  # Minimal validation
-                        # Adding the new study
-                        study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
-                                                 STUDY=new_study_name, 
-                                                 ARC=new_study_primary_arc, 
-                                                 ARC_BACKUP=new_study_backup_arc if new_study_backup_arc else "")
-                        st.success(f"Nouvelle étude '{new_study_name}' ajoutée avec succès.")
-                        st.rerun()
-                    else:
-                        st.error("Le nom de l'étude et l'ARC principal sont requis.")
+                col_add, col_list = st.columns(2)
+                    with col_add:
+                    if st.button("Ajouter l'étude"):
+                        if new_study_name and new_study_primary_arc:  # Minimal validation
+                            # Adding the new study
+                            study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
+                                                     STUDY=new_study_name, 
+                                                     ARC=new_study_primary_arc, 
+                                                     ARC_BACKUP=new_study_backup_arc if new_study_backup_arc else "")
+                            st.success(f"Nouvelle étude '{new_study_name}' ajoutée avec succès.")
+                            st.rerun()
+                        else:
+                            st.error("Le nom de l'étude et l'ARC principal sont requis.")
+                with col_list:
+                    st.write(load_all_study_names(BUCKET_NAME))
 
             with col_delete:
                 st.markdown("#### Archivage d'une étude")
@@ -759,8 +762,7 @@ def main():
         with tab5:
             # Study selection
             study_names = load_all_study_names(BUCKET_NAME)
-            st.write(study_names)
-            study_choice = st.selectbox("Choisissez votre étude", study_names)
+            study_choice = st.selectbox("Choisissez votre étude (en cours et archivées)", study_names)
 
             # Loading and combining data from all ARCs
             all_arcs_df = pd.DataFrame()
