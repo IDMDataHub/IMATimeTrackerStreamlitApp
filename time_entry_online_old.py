@@ -19,38 +19,31 @@ import sys
 BUCKET_NAME = "imotion"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 YEARS = list(range(2024, 2030))
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'TOTAL', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
 INT_CATEGORIES = CATEGORIES[3:-1]
-# Configuration des colonnes avec "help" pour toutes les colonnes
 COLUMN_CONFIG = {
-    'YEAR': st.column_config.TextColumn("Année", help="Année"),
-    'WEEK': st.column_config.TextColumn("Sem.", help="Numéro de la semaine"),
-    'STUDY': st.column_config.TextColumn("Étude", help="Nom de l'étude"),
-    'TOTAL': st.column_config.NumberColumn("Total", help="Temps total passé"),
-    
-    # Pour les cases à cocher
-    'MISE EN PLACE': st.column_config.CheckboxColumn("MEP", help="Mise en place"),
-    'TRAINING': st.column_config.CheckboxColumn("Form.", help="Formation"),
-    'VISITES': st.column_config.CheckboxColumn("Vis.", help="Organisation des Visites"),
-    'SAISIE CRF': st.column_config.CheckboxColumn("CRF", help="Saisie CRF"),
-    'QUERIES': st.column_config.CheckboxColumn("Quer.", help="Queries"),
-    'MONITORING': st.column_config.CheckboxColumn("Monit.", help="Monitoring"),
-    'REMOTE': st.column_config.CheckboxColumn("Rem.", help="Remote"),
-    'REUNIONS': st.column_config.CheckboxColumn("Réu.", help="Réunions"),
-    'ARCHIVAGE EMAIL': st.column_config.CheckboxColumn("Arch. Email", help="Archivage des emails"),
-    'MAJ DOC': st.column_config.CheckboxColumn("Maj. Doc", help="Mise à jour des documents"),
-    'AUDIT & INSPECTION': st.column_config.CheckboxColumn("Aud.&Insp.", help="Audit et Inspection"),
-    'CLOTURE': st.column_config.CheckboxColumn("Clôture", help="Clôture"),
-    
-    # Colonnes numériques ou textuelles avec "help"
-    'NB_VISITE': st.column_config.NumberColumn("Nb Vis.", help="Nombre de visites"),
-    'NB_PAT_SCR': st.column_config.NumberColumn("Nb Pat. Scr.", help="Nombre de patients screenés"),
-    'NB_PAT_RAN': st.column_config.NumberColumn("Nb Pat. Rand.", help="Nombre de patients randomisés"),
-    'NB_EOS': st.column_config.NumberColumn("Nb EOS.", help="Nombre d'EOS"),
-    'COMMENTAIRE': st.column_config.TextColumn("Commentaires", help="Commentaires")
+    'YEAR': {"label": 'Année', "description": "Année"},
+    'WEEK': {"label": 'Sem.', "description": "Numéro de la semaine"},
+    'STUDY': {"label": 'Étude', "description": "Nom de l'étude"},
+    'MISE EN PLACE': {"label": 'MEP', "description": "Mise en place"},
+    'TRAINING': {"label": 'Form.', "description": "Formation"},
+    'VISITES': {"label": 'Vis.', "description": "Organisation des Visites"},
+    'SAISIE CRF': {"label": 'CRF', "description": "Saisie CRF"},
+    'QUERIES': {"label": 'Quer.', "description": "Queries"},
+    'MONITORING': {"label": 'Monit.', "description": "Monitoring"},
+    'REMOTE': {"label": 'Rem.', "description": "Remote"},
+    'REUNIONS': {"label": 'Réu.', "description": "Réunions"},
+    'ARCHIVAGE EMAIL': {"label": 'Arch. Email', "description": "Archivage des emails"},
+    'MAJ DOC': {"label": 'Maj. Doc', "description": "Mise à jour des documents (ISF & Gaia)"},
+    'AUDIT & INSPECTION': {"label": 'Aud.&Insp.', "description": "Audit et Inspection"},
+    'CLOTURE': {"label": 'Clôture', "description": "Clôture"},
+    'NB_VISITE': {"label": 'Nb Vis.', "description": "Nombre de visites"},
+    'NB_PAT_SCR': {"label": 'Nb Pat. Scr. .', "description": "Nombre de patients screenés"},
+    'NB_PAT_RAN': {"label": 'Nb Pat. Rand.', "description": "Nombre de patients randomisés"},
+    'NB_EOS': {"label": 'Nb EOS.', "description": "Nombre d'EOS"},
+    'COMMENTAIRE': {"label": 'Comm.', "description": "Commentaires"}
 }
-
 
 s3_client = boto3.client(
     's3',
@@ -58,7 +51,7 @@ s3_client = boto3.client(
     aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
 )
 
-def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):    
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     """
     Load a CSV file from an AWS S3 bucket using boto3, then read it into a pandas DataFrame.
 
@@ -142,6 +135,7 @@ keys_df_quantity = ['YEAR', 'WEEK', 'STUDY'] + list(COLUMN_CONFIG.keys())[list(C
 # Create configurations for each part
 column_config_df_time = {k: COLUMN_CONFIG[k] for k in keys_df_time}
 column_config_df_quantity = {k: COLUMN_CONFIG[k] for k in keys_df_quantity}
+
 
 #####################################################################
 # ===================== ASSISTANCE FUNCTIONS ====================== #
@@ -307,6 +301,33 @@ def save_data(df, arc):
     s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
 # ========================================================================================================================================
+# GRAPH AND DISPLAY
+def display_glossary(column_config):
+    """
+    Display a glossary of terms and descriptions from a column configuration, using Streamlit.
+
+    Parameters:
+    - column_config (dict): A dictionary containing column configurations, where each key represents a term
+      and each value is a dictionary with keys like 'label' and 'description' for that term.
+
+    Returns:
+    None
+
+    Raises:
+    None
+    
+    Uses Streamlit to render the glossary as HTML.
+    """
+    glossary_html = "<div style='margin-left: 10px;'>"
+    for term, config in column_config.items():
+        label = config["label"]
+        description = config.get("description", "Description non fournie")
+        glossary_html += f"<b>{label}</b> : {description}<br>"
+    glossary_html += "</div>"
+    st.markdown(glossary_html, unsafe_allow_html=True)
+
+
+# ========================================================================================================================================
 # CALCULATIONS
 def authenticate_user(arc, password_entered):
     """
@@ -372,7 +393,8 @@ def get_start_end_dates(year, week_number):
 # CREATION AND MODIFICATION
 def check_create_weekly_file(arc, year, week):
     """
-    Checks the existence of a weekly file for a given ARC. If the file does not exist, creates a new DataFrame with the specified columns and saves it to S3.
+    Checks the existence of a weekly file for a given ARC. If the file does not exist,
+    creates a new DataFrame with the specified columns and saves it to S3.
 
     Parameters:
     - arc (str): The ARC identifier.
@@ -401,8 +423,8 @@ def check_create_weekly_file(arc, year, week):
         new_studies = [study for study in assigned_studies if study not in existing_studies.tolist()]
         
         # Prepare new rows to add only for new studies
-        rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'TOTAL':0,'MISE EN PLACE': False, 'TRAINING': False, 'VISITES': False, 'SAISIE CRF': False, 'QUERIES': False, 
-             'MONITORING': False, 'REMOTE': False, 'REUNIONS': False, 'ARCHIVAGE EMAIL': False, 'MAJ DOC': False, 'AUDIT & INSPECTION': False, 'CLOTURE': False, 
+        rows = [{'YEAR': year, 'WEEK': week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
+             'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
              'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in new_studies]
         if rows:  # If there are new studies to add
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
@@ -444,19 +466,6 @@ def delete_ongoing_file(arc):
 
 # Validation et ajustement des valeurs pour s'assurer qu'elles n'ont que deux décimales
 def validate_and_format(df, columns):
-    """
-    Validates and formats the specified columns of a DataFrame by rounding their values to two decimal places.
-
-    Parameters:
-    - df (pandas.DataFrame): The DataFrame containing the columns to be validated and formatted.
-    - columns (list): A list of column names from the DataFrame that need to be validated and formatted.
-
-    Returns:
-    - pandas.DataFrame: The DataFrame with the specified columns' values rounded to two decimal places.
-
-    Raises:
-    None
-    """
     for col in columns:
         df[col] = df[col].apply(lambda x: round(float(x), 2))
     return df
@@ -466,27 +475,6 @@ def validate_and_format(df, columns):
 # SAVE AUTOMATIC
 
 def main_auto_save_all():
-    """
-    Automates the process of saving data for all ARCs by updating weekly and time data for each ARC, 
-    and ensuring that the data is properly saved to S3.
-
-    Parameters:
-    None
-
-    Returns:
-    None
-
-    Raises:
-    None, but logs errors and exceptions during the execution of the saving process.
-
-    Process:
-    1. Iterates over all ARCs from the ARC_PASSWORDS dictionary.
-    2. For each ARC, loads the data, calculates the current and surrounding weeks.
-    3. Checks for existing time data for the current week and updates it with relevant study information.
-    4. Filters the data for "Principal" and "Backup" roles, updates the corresponding time and quantity data.
-    5. Ensures that old data for the selected week is removed and new data is saved back to S3.
-    6. Logs progress and completion of the save process for each ARC.
-    """
     for arc in ARC_PASSWORDS.keys():
         st.write(f"Sauvegarde automatique pour l'ARC : {arc}")
 
@@ -566,6 +554,9 @@ def main():
     if not authenticate_user(arc, arc_password_entered):
         st.sidebar.error("Mot de passe incorrect pour l'ARC sélectionné.")
         return
+    
+    with st.sidebar.expander("Glossaire des catégories"):
+        display_glossary(COLUMN_CONFIG)
 
     # I. Data loading
     df_data = load_data(arc)
@@ -627,8 +618,8 @@ def main():
         else:
             # time_df is completely empty
             assigned_studies = set(load_assigned_studies(arc))
-            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'TOTAL':0, 'MISE EN PLACE': False, 'TRAINING': False, 'VISITES': False, 'SAISIE CRF': False, 'QUERIES': False, 
-             'MONITORING': False, 'REMOTE': False, 'REUNIONS': False, 'ARCHIVAGE EMAIL': False, 'MAJ DOC': False, 'AUDIT & INSPECTION': False, 'CLOTURE': False, 
+            rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
+             'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
              'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
             
@@ -646,16 +637,8 @@ def main():
         # Convertir les colonnes de temps en float pour accepter les décimales
         for col in keys_df_time[3:]:  # Exclude 'YEAR', 'WEEK', and 'STUDY'
             filtered_df2[col] = filtered_df2[col].astype(float)
-
-        columns_to_convert_to_bool = [
-		    'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 
-		    'MONITORING', 'REMOTE', 'REUNIONS', 'ARCHIVAGE EMAIL', 
-		    'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE']
-
-        for col in columns_to_convert_to_bool:
-            filtered_df2[col] = filtered_df2[col].astype(bool)  # Conversion en booléen
-
-		# Fusionner les données filtrées avec les rôles d'études
+        
+        # Fusionner les données filtrées avec les rôles d'études
         filtered_df2 = pd.merge(filtered_df2, assigned_studies_df[['STUDY', 'ROLE']], on='STUDY', how='left')
         
         # Filtrer les données pour le rôle "Principal"

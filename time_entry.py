@@ -8,6 +8,7 @@ import datetime
 import locale
 import os
 from io import StringIO, BytesIO
+import sys
 
 #####################################################################
 # =========================== CONSTANTES ========================== #
@@ -105,6 +106,15 @@ def load_time_data(arc, week):
     else:
         return pd.DataFrame()
 
+def load_assigned_studies_with_roles(arc):
+    study_file_path = os.path.join(DATA_FOLDER, "STUDY.csv")
+    df_study = pd.read_csv(study_file_path, sep=";")
+    # Créer deux colonnes pour identifier si l'ARC est principal ou backup
+    df_study['ROLE'] = df_study.apply(lambda row: 'Principal' if row['ARC'] == arc else 'Backup' if row['ARC_BACKUP'] == arc else None, axis=1)
+    # Filtrer les études assignées à cet ARC
+    assigned_studies = df_study[df_study['ROLE'].notnull()]
+    return assigned_studies
+
 def get_start_end_dates(year, week_number):
     # Trouver le premier jour de l'année
     first_day_of_year = datetime.datetime(year-1, 12, 31)
@@ -170,12 +180,76 @@ def display_glossary(column_config):
     glossary_html += "</div>"
     st.markdown(glossary_html, unsafe_allow_html=True)
 
+import sys
+
+def main_auto_save_all():
+    for arc in ARC_PASSWORDS.keys():
+        st.write(f"Sauvegarde automatique pour l'ARC : {arc}")
+
+        # Chargement des données
+        df_data = load_data(DATA_FOLDER, arc)
+        two_weeks_ago, previous_week, current_week, next_week, current_year = calculate_weeks()
+
+        # Sélection de la semaine en cours
+        selected_week = current_week
+
+        # Chargement des données de la semaine en cours
+        time_df = load_time_data(arc, selected_week)
+        weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
+        filtered_df2 = load_weekly_data(weekly_file_path)
+
+        # Traitement des données
+        assigned_studies_df = load_assigned_studies_with_roles(arc)
+        filtered_df2['YEAR'] = filtered_df2['YEAR'].astype(str)
+        filtered_df2['WEEK'] = filtered_df2['WEEK'].astype(str)
+        filtered_df2 = pd.merge(filtered_df2, assigned_studies_df[['STUDY', 'ROLE']], on='STUDY', how='left')
+
+        # Filtrer pour le rôle "Principal"
+        df_principal = filtered_df2[filtered_df2['ROLE'] == 'Principal']
+        df_time_principal = df_principal[keys_df_time]
+        df_quantity_principal = df_principal[keys_df_quantity]
+
+        # Filtrer pour le rôle "Backup"
+        df_backup = filtered_df2[filtered_df2['ROLE'] == 'Backup']
+        df_time_backup = df_backup[keys_df_time]
+        df_quantity_backup = df_backup[keys_df_quantity]
+
+        # Retirer les anciennes données de la semaine sélectionnée
+        df_data = df_data[df_data['WEEK'] != int(selected_week)]
+
+        # Assurez-vous que 'YEAR', 'WEEK', 'STUDY' sont présents dans les DataFrames pour l'alignement
+        df_time_principal = df_time_principal.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df_quantity_principal = df_quantity_principal.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df_time_backup = df_time_backup.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df_quantity_backup = df_quantity_backup.set_index(['YEAR', 'WEEK', 'STUDY'])
+
+        # Concaténation des DataFrames "Principal" sur l'axe des colonnes
+        df_principal = pd.concat([df_time_principal, df_quantity_principal], axis=1)
+        df_principal.reset_index(inplace=True)
+
+        # Concaténation des DataFrames "Backup" sur l'axe des colonnes
+        df_backup = pd.concat([df_time_backup, df_quantity_backup], axis=1)
+        df_backup.reset_index(inplace=True)
+
+        # Concaténer les nouvelles données principales et backup avec les anciennes données
+        updated_df = pd.concat([df_data, df_principal, df_backup]).sort_index()
+
+        # Sauvegarder le DataFrame mis à jour
+        save_data(DATA_FOLDER, updated_df, arc)
+
+        # Supprimer le fichier Ongoing_ARC.csv
+        delete_ongoing_file(arc)
+
+        st.write(f"Sauvegarde terminée pour l'ARC : {arc}")
+
+
 #####################################################################
 # ====================== FONCTION PRINCIPALE ====================== #
 #####################################################################
 
 def main():
     st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace ARCs")
+
     st.title("I-Motion Adulte - Espace ARCs")
     st.write("---")
 
@@ -196,7 +270,6 @@ def main():
     two_weeks_ago, previous_week, current_week, next_week, current_year = calculate_weeks()
 
     # II. Section pour la modification des données
-    st.write("---")
     st.subheader("Entrée d'heures")
     
     week_choice2 = st.radio(
@@ -210,11 +283,7 @@ def main():
     selected_week = int(week_choice2.split()[-1].strip(')'))
     time_df = load_time_data(arc, selected_week)
 
-
-    if "Semaine précédente" in week_choice2:
-        # Charger les données de la semaine précédente à partir de Time_arc.csv
-        filtered_df2 = time_df
-    else:
+    if "en cours" in week_choice2:
         # Charger les données de la semaine en cours à partir de Ongoing_arc.csv
         weekly_file_path = check_create_weekly_file(arc, current_year, current_week)
         filtered_df2 = load_weekly_data(weekly_file_path)
@@ -255,36 +324,70 @@ def main():
         else:
             # time_df est complètement vide
             assigned_studies = set(load_assigned_studies(arc))
+
             rows = [{'YEAR': current_year, 'WEEK': current_week, 'STUDY': study, 'MISE EN PLACE': 0, 'TRAINING': 0, 'VISITES': 0, 'SAISIE CRF': 0, 'QUERIES': 0, 
              'MONITORING': 0, 'REMOTE': 0, 'REUNIONS': 0, 'ARCHIVAGE EMAIL': 0, 'MAJ DOC': 0, 'AUDIT & INSPECTION': 0, 'CLOTURE': 0, 
              'NB_VISITE': 0, 'NB_PAT_SCR':0, 'NB_PAT_RAN':0, 'NB_EOS':0, 'COMMENTAIRE': "Aucun"} for study in assigned_studies]
             filtered_df2 = pd.DataFrame(rows)
- 
+
+    else:
+        # Charger les données de la semaine précédente à partir de Time_arc.csv
+        filtered_df2 = time_df
+
+    # Charger les études assignées avec les rôles
+    assigned_studies_df = load_assigned_studies_with_roles(arc)
+
     if not filtered_df2.empty:
         filtered_df2['YEAR'] = filtered_df2['YEAR'].astype(str)
         filtered_df2['WEEK'] = filtered_df2['WEEK'].astype(str)
+        
+        # Fusionner les données filtrées avec les rôles d'études
+        filtered_df2 = pd.merge(filtered_df2, assigned_studies_df[['STUDY', 'ROLE']], on='STUDY', how='left')
+        
+        # Filtrer les données pour le rôle "Principal"
+        df_principal = filtered_df2[filtered_df2['ROLE'] == 'Principal']
+        df_time_principal = df_principal[keys_df_time]
+        df_quantity_principal = df_principal[keys_df_quantity]
+        
+        # Filtrer les données pour le rôle "Backup"
+        df_backup = filtered_df2[filtered_df2['ROLE'] == 'Backup']
+        df_time_backup = df_backup[keys_df_time]
+        df_quantity_backup = df_backup[keys_df_quantity]
 
-        # Séparer votre DataFrame en deux selon les clés spécifiées
-        df_time2 = filtered_df2[keys_df_time]
-        df_quantity2 = filtered_df2[keys_df_quantity]
-
-        # Afficher la première partie avec sa configuration de colonne
-        st.markdown('**Partie "Temps"**')
-        df1_edited = st.data_editor(
-            data=df_time2,
+        # Afficher les tableaux pour le rôle "Principal"
+        st.markdown('**Partie "Temps" - Etudes Principales**')
+        df1_edited_principal = st.data_editor(
+            data=df_time_principal,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=column_config_df_time  # Utilisez votre configuration de colonne spécifique ici
+            column_config=column_config_df_time
         )
 
-        # Afficher la seconde partie avec sa configuration de colonne
-        st.markdown('**Partie "Quantité"**')
-        df2_edited = st.data_editor(
-            data=df_quantity2,
+        st.markdown('**Partie "Quantité" - Etudes Principales**')
+        df2_edited_principal = st.data_editor(
+            data=df_quantity_principal,
             hide_index=True,
             disabled=["YEAR", "WEEK", "STUDY"],
-            column_config=column_config_df_quantity  # Utilisez votre configuration de colonne spécifique ici
+            column_config=column_config_df_quantity
         )
+
+        with st.expander("Voir les Etudes Backup"):
+            # Afficher les tableaux pour le rôle "Backup"
+            st.markdown('**Partie "Temps" - Backup**')
+            df1_edited_backup = st.data_editor(
+                data=df_time_backup,
+                hide_index=True,
+                disabled=["YEAR", "WEEK", "STUDY"],
+                column_config=column_config_df_time
+            )
+
+            st.markdown('**Partie "Quantité" - Backup**')
+            df2_edited_backup = st.data_editor(
+                data=df_quantity_backup,
+                hide_index=True,
+                disabled=["YEAR", "WEEK", "STUDY"],
+                column_config=column_config_df_quantity
+            )
 
     else:
         st.write("Aucune donnée disponible pour la semaine sélectionnée.")
@@ -295,18 +398,22 @@ def main():
         # Retirer les anciennes données de la semaine sélectionnée
         df_data = df_data[df_data['WEEK'] != int(selected_week)]
 
-        # Assurez-vous que 'YEAR', 'WEEK', 'STUDY' sont présents dans les deux DataFrames pour l'alignement
-        df1_edited = df1_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
-        df2_edited = df2_edited.set_index(['YEAR', 'WEEK', 'STUDY'])
+        # Assurez-vous que 'YEAR', 'WEEK', 'STUDY' sont présents dans les DataFrames pour l'alignement
+        df1_edited_principal = df1_edited_principal.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df2_edited_principal = df2_edited_principal.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df1_edited_backup = df1_edited_backup.set_index(['YEAR', 'WEEK', 'STUDY'])
+        df2_edited_backup = df2_edited_backup.set_index(['YEAR', 'WEEK', 'STUDY'])
 
-        # Concaténation des deux DataFrames sur l'axe des colonnes
-        df = pd.concat([df1_edited, df2_edited], axis=1)
+        # Concaténation des DataFrames "Principal" sur l'axe des colonnes
+        df_principal = pd.concat([df1_edited_principal, df2_edited_principal], axis=1)
+        df_principal.reset_index(inplace=True)
 
-        # Réinitialiser l'indice si nécessaire
-        df.reset_index(inplace=True)
+        # Concaténation des DataFrames "Backup" sur l'axe des colonnes
+        df_backup = pd.concat([df1_edited_backup, df2_edited_backup], axis=1)
+        df_backup.reset_index(inplace=True)
 
-        # Concaténer avec les nouvelles données
-        updated_df = pd.concat([df_data, df]).sort_index()
+        # Concaténer les nouvelles données principales et backup avec les anciennes données
+        updated_df = pd.concat([df_data, df_principal, df_backup]).sort_index()
 
         # Sauvegarder le DataFrame mis à jour
         save_data(DATA_FOLDER, updated_df, arc)
@@ -318,6 +425,8 @@ def main():
 
         # Recharger la page
         st.rerun()
+
+    st.write("---")
 
     # IV. Interface utilisateur pour la sélection de l'année et de la semaine
     st.subheader("Visualisation de l'historique")
@@ -357,4 +466,7 @@ def main():
 #####################################################################
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) > 1 and sys.argv[1] == "auto_save_all":
+        main_auto_save_all()
+    else:
+        main()

@@ -25,11 +25,10 @@ ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 STUDY_INFO_FILE = "STUDY.csv"
 PASSWORD = os.getenv('APP_MDP')
 YEARS = list(range(2024, 2030))
-CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'TOTAL', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
+CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
 INT_CATEGORIES = CATEGORIES[3:-1]
 TIME_INT_CAT = CATEGORIES[3:-5]
-ACTION_CAT = CATEGORIES[4:-5]
 MONTHS = ["Janvier", "FÃ©vrier", "Mars", "Avril", "Mai", "Juin", "Juillet", "AoÃ»t", "Septembre", "Octobre", "Novembre", "DÃ©cembre"]
 SHAPE_BOX = {
     "ha": 'center', 
@@ -216,7 +215,7 @@ def convert_df_to_excel(df):
 
 # ========================================================================================================================================
 # GRAPH AND DISPLAY
-def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Nombre d'heure(s)"):
+def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Hours"):
     """
     Creates and displays a bar chart from the provided data.
 
@@ -244,11 +243,10 @@ def create_bar_chart(data, title, week_or_month, y='Total Time', y_axis="Nombre 
     ax.set_title(f'{title} pour {week_or_month}')
     ax.set_xlabel('')
     ax.set_ylabel(y_axis)
-    ax.set_ylim(0, None)  # None means the upper limit will be set automatically based on the data
     ax.xaxis.set_ticks_position('none') 
     ax.yaxis.set_ticks_position('none')
     sns.despine(left=False, bottom=False)
-    plt.xticks(rotation=45, ha='right')
+    plt.xticks(rotation=45)
     st.pyplot(fig)
 
 def plot_pie_chart_on_ax(df_study_sum, title, ax):
@@ -265,7 +263,7 @@ def plot_pie_chart_on_ax(df_study_sum, title, ax):
     """
     colors = [category_colors[cat] for cat in df_study_sum.index if cat in category_colors]
     
-    wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f}'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
+    wedges, texts, autotexts = ax.pie(df_study_sum, labels=df_study_sum.index, autopct=lambda p: '{:.0f} h'.format(p * df_study_sum.sum() / 100), startangle=140, colors=colors)
     
     for autotext in autotexts:
         autotext.set_color('white')
@@ -286,7 +284,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
     Returns:
     None
     """
-    st.write(f"DonnÃ©es pour {period_label} {period}")
+    st.write(f"Charts for {period_label} {period}")
     
     if len(studies) > 0:
         nrows = (len(studies) + 1) // 2 if len(studies) % 2 else len(studies) // 2
@@ -295,11 +293,11 @@ def generate_charts_for_time_period(df, studies, period, period_label):
 
         for i, study in enumerate(studies):
             df_study = df[df['STUDY'] == study]
-            df_study_sum = df_study[ACTION_CAT].fillna(0).sum()
+            df_study_sum = df_study[TIME_INT_CAT].fillna(0).sum()
             df_study_sum = df_study_sum[df_study_sum > 0]
 
             if df_study_sum.sum() > 0:
-                plot_pie_chart_on_ax(df_study_sum, f'Actions par TÃ¢che pour {study}', axs[i])
+                plot_pie_chart_on_ax(df_study_sum, f'Temps par TÃ¢che pour {study}', axs[i])
             else:
                 # Add text with rounded box
                 axs[i].text(0.5, 0.5, f"Aucune donnÃ©e disponible\npour {study}", **SHAPE_BOX)
@@ -327,12 +325,12 @@ def process_and_display_data(df, period_label, period_value):
     None
     """
     df_activities = df.groupby('STUDY')[TIME_INT_CAT].sum()
-    df_activities['Total Time'] = df_activities['TOTAL']
+    df_activities['Total Time'] = df_activities.sum(axis=1)
     df_activities_sorted = df_activities.sort_values('Total Time', ascending=False)
     create_bar_chart(df_activities_sorted, f'Heures PassÃ©es par Ã‰tude', f'{period_label} {period_value}')
     
     # Calculating and displaying total time spent and total number of visits
-    total_time_spent = int(df_activities_sorted['TOTAL'].sum())
+    total_time_spent = int(df_activities_sorted['Total Time'].sum())
     unit = "heure" if total_time_spent <= 1 else "heures"
     total_visits = int(sum(df['NB_VISITE']))
     
@@ -635,6 +633,7 @@ def main():
                     )
 
 
+
             with col_delete:
                 st.markdown("#### Archivage d'une Ã©tude")
                 study_options = study_df['STUDY'].dropna().astype(str).tolist()
@@ -761,7 +760,7 @@ def main():
                 if arc is not None and not (isinstance(arc, float) and math.isnan(arc)):
                     try:
                         df_arc = load_data(arc)
-                        df_arc['Total Time'] = df_arc['TOTAL']
+                        df_arc['Total Time'] = df_arc[TIME_INT_CAT].sum(axis=1)
                         df_arc = df_arc.groupby(['YEAR', 'WEEK'])['Total Time'].sum().reset_index()
                         
                         # Prepare a DataFrame with all weeks for the last 5 weeks with default values as 0
@@ -818,7 +817,7 @@ def main():
             filtered_df_by_study[TIME_INT_CAT] = filtered_df_by_study[TIME_INT_CAT].apply(pd.to_numeric, errors='coerce')
 
             # Calculate total time spent by activity category for the selected study
-            total_time_by_category = filtered_df_by_study[ACTION_CAT].sum()
+            total_time_by_category = filtered_df_by_study[TIME_INT_CAT].sum()
 
             # Using st.columns to divide display space
             col_table, _, col_graph = st.columns([1.5, 0.2, 2])
@@ -827,12 +826,11 @@ def main():
                 st.write(f"Temps passÃ© sur l'Ã©tude {study_choice}, par catÃ©gorie d'activitÃ© :")
                 
                 # Start with a Markdown header for the table
-                markdown_table = "CatÃ©gorie | Actions rÃ©alisÃ©es\n:- | -:\n"
+                markdown_table = "CatÃ©gorie | Heures passÃ©es\n:- | -:\n"
                 
                 # Add each category and corresponding time in Markdown format
                 for category, hours in total_time_by_category.items():
-                    if category != "TOTAL":
-                        markdown_table += f"{category} | {int(hours)}\n"
+                    markdown_table += f"{category} | {hours}\n"
                 
                 # Display the formatted table in Markdown
                 st.markdown(markdown_table)
@@ -843,7 +841,7 @@ def main():
                 # Ensure total_time_by_category is defined before this line
                 total_time_by_category = total_time_by_category[total_time_by_category > 0]
                 if total_time_by_category.sum() > 0:
-                    plot_pie_chart_on_ax(total_time_by_category, f"RÃ©partition des actions par catÃ©gorie pour l'Ã©tude {study_choice}", ax)
+                    plot_pie_chart_on_ax(total_time_by_category, f"RÃ©partition du temps par catÃ©gorie pour l'Ã©tude {study_choice}", ax)
                 else:
                     ax.text(0.5, 0.5, f"Aucune donnÃ©e disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes) # Correct reference to study choice variable and positioning
                     ax.set_axis_off()  # Hide axes if no data
@@ -856,7 +854,7 @@ def main():
                 st.write(f"Temps total passÃ© par ARC sur l'Ã©tude {study_choice} :")
                 
                 # Group data by ARC and calculate total
-                total_time_by_arc = filtered_df_by_study.groupby('ARC')['TOTAL'].sum()
+                total_time_by_arc = filtered_df_by_study.groupby('ARC')[TIME_INT_CAT].sum().sum(axis=1)
                 
                 # Check if DataFrame is not empty
                 if not total_time_by_arc.empty:
@@ -919,7 +917,7 @@ def main():
                                         (all_arcs_df['WEEK'] <= end_week)]
 
             df_activities_month = filtered_month_df.groupby('STUDY')[TIME_INT_CAT].sum()
-            df_activities_month['Total Time'] = df_activities_month['TOTAL']
+            df_activities_month['Total Time'] = df_activities_month.sum(axis=1)
             df_activities_month_sorted = df_activities_month.sort_values('Total Time', ascending=False)
 
             filtered_year_df = all_arcs_df[(all_arcs_df['YEAR'] == year_choice)]

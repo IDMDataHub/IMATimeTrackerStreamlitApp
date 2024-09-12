@@ -284,6 +284,7 @@ def delete_row(df, row_to_delete, file_name):
 def main():
     try:
         st.set_page_config(layout="wide", page_icon="data/icon.png", page_title="I-Motion Adulte - Espace Chefs de Projets")
+
     except:
         pass
 
