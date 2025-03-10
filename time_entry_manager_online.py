@@ -30,7 +30,7 @@ CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'TOTAL', 'MISE EN PLACE', 'TRAINING', 'VI
 INT_CATEGORIES = CATEGORIES[3:-1]
 TIME_INT_CAT = CATEGORIES[3:-5]
 ACTION_CAT = CATEGORIES[4:-5]
-MONTHS = ["Janvier", "FÃ©vrier", "Mars", "Avril", "Mai", "Juin", "Juillet", "AoÃ»t", "Septembre", "Octobre", "Novembre", "DÃ©cembre"]
+MONTHS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 SHAPE_BOX = {
     "ha": 'center', 
     "va": 'center', 
@@ -45,6 +45,7 @@ SHAPE_BOX = {
 
 s3_client = boto3.client(
     's3',
+    region_name='eu-west-3',
     aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
     aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
 )
@@ -63,6 +64,7 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     - pandas.DataFrame: A DataFrame containing the data from the loaded CSV file.
                          Returns None if loading fails.
     """
+    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     try:
         obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
         body = obj['Body'].read().decode(encoding)
@@ -74,8 +76,10 @@ def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
             return pd.read_csv(StringIO(body), encoding='latin1', sep=sep)
         except FileNotFoundError:
             return None
-    except:
+    except Exception as e:
+        st.write("S3 Access Error:", e)
         return None
+        
 
 # Creating a "viridis" palette with the appropriate number of colors
 viridis_palette = sns.color_palette("viridis", len(TIME_INT_CAT))
@@ -96,7 +100,13 @@ def load_arc_passwords():
     except UnicodeDecodeError:
         # If an encoding error occurs, try loading with Latin1 encoding
         df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
-    return dict(zip(df['ARC'], df['MDP']))
+
+    # Verify if df is not None and has the expected columns
+    if df is not None and 'ARC' in df.columns and 'MDP' in df.columns:
+        return dict(zip(df['ARC'], df['MDP']))
+    else:
+        st.write("Error: The DataFrame is empty or missing required columns.")
+        return {}  # Return an empty dictionary if df is None or missing columns
 
 ARC_PASSWORDS = load_arc_passwords()
 
@@ -286,7 +296,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
     Returns:
     None
     """
-    st.write(f"DonnÃ©es pour {period_label} {period}")
+    st.write(f"Données pour {period_label} {period}")
     
     if len(studies) > 0:
         nrows = (len(studies) + 1) // 2 if len(studies) % 2 else len(studies) // 2
@@ -299,10 +309,10 @@ def generate_charts_for_time_period(df, studies, period, period_label):
             df_study_sum = df_study_sum[df_study_sum > 0]
 
             if df_study_sum.sum() > 0:
-                plot_pie_chart_on_ax(df_study_sum, f'Actions par TÃ¢che pour {study}', axs[i])
+                plot_pie_chart_on_ax(df_study_sum, f'Actions par Tâche pour {study}', axs[i])
             else:
                 # Add text with rounded box
-                axs[i].text(0.5, 0.5, f"Aucune donnÃ©e disponible\npour {study}", **SHAPE_BOX)
+                axs[i].text(0.5, 0.5, f"Aucune donnée disponible\npour {study}", **SHAPE_BOX)
                 axs[i].set_axis_off()  # Hide axes if no data
 
         # Hide extra axes if not used
@@ -312,7 +322,7 @@ def generate_charts_for_time_period(df, studies, period, period_label):
         plt.tight_layout()
         st.pyplot(fig) 
     else:
-        st.warning("Aucune Ã©tude sÃ©lectionnÃ©e ou aucune donnÃ©e disponible pour les Ã©tudes sÃ©lectionnÃ©es.")
+        st.warning("Aucune étude sélectionnée ou aucune donnée disponible pour les études sélectionnées.")
 
 def process_and_display_data(df, period_label, period_value):
     """
@@ -329,7 +339,7 @@ def process_and_display_data(df, period_label, period_value):
     df_activities = df.groupby('STUDY')[TIME_INT_CAT].sum()
     df_activities['Total Time'] = df_activities['TOTAL']
     df_activities_sorted = df_activities.sort_values('Total Time', ascending=False)
-    create_bar_chart(df_activities_sorted, f'Heures PassÃ©es par Ã‰tude', f'{period_label} {period_value}')
+    create_bar_chart(df_activities_sorted, f'Heures Passées par Étude', f'{period_label} {period_value}')
     
     # Calculating and displaying total time spent and total number of visits
     total_time_spent = int(df_activities_sorted['TOTAL'].sum())
@@ -338,7 +348,7 @@ def process_and_display_data(df, period_label, period_value):
     
     time, visit = st.columns(2)
     with time:
-        st.metric(label="Temps total passÃ©", value=f"{total_time_spent} {unit}")
+        st.metric(label="Temps total passé", value=f"{total_time_spent} {unit}")
     with visit:
         st.metric(label="Nombre total de visites", value=f"{total_visits}")
 
@@ -355,7 +365,7 @@ def generate_time_series_chart(data_dict, title_prefix, mode='year'):
     None
     """
     if not data_dict:
-        st.error("Aucune donnÃ©e disponible pour l'affichage du graphique.")
+        st.error("Aucune donnée disponible pour l'affichage du graphique.")
         return
 
     _, current_week, _, current_year, _ = calculate_weeks()
@@ -372,7 +382,7 @@ def generate_time_series_chart(data_dict, title_prefix, mode='year'):
             filtered_data = data  # For the last 5 weeks, uses all available data
         sns.lineplot(ax=ax, x='WEEK', y='Total Time', data=filtered_data, label=arc)
 
-    plt.title(f"{title_prefix} du Temps Total PassÃ© par Chaque ARC")
+    plt.title(f"{title_prefix} du Temps Total Passé par Chaque ARC")
     plt.xlabel('Semaines')
     plt.ylabel('Temps Total (Heures)')
     
@@ -521,7 +531,7 @@ def main():
     None
     """
     try:
-        st.set_page_config(layout="wide", page_icon="ðŸ“Š", page_title="I-Motion Adult - Project Managers Space")
+        st.set_page_config(layout="wide", page_icon="📊", page_title="I-Motion Adult - Project Managers Space")
                 
     except:
         pass
@@ -538,7 +548,7 @@ def main():
             if password_input == PASSWORD:
                 st.session_state.authenticated = True
             else:
-                st.write("Mot de passe incorrect. Veuillez rÃ©essayer.")
+                st.write("Mot de passe incorrect. Veuillez réessayer.")
 
     if st.session_state.authenticated:
         col_title, col_logout = st.columns([8, 1])
@@ -547,13 +557,13 @@ def main():
             st.title("I-Motion Adulte - Espace Chefs de Projets")
 
         with col_logout:
-            if st.button("Se dÃ©connecter"):
+            if st.button("Se déconnecter"):
                 st.session_state.authenticated = False
                 st.rerun()
         st.write("---")
 
         # Selection tab
-        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["ðŸ‘¥ Gestion - ARCs", "ðŸ“š Gestion - Etudes", "ðŸ“ˆ Dashboard - par ARC", "ðŸ“Š Dashboard - tous ARCs",  "ðŸ“ˆ Dashboard - par Etude", "ðŸ“Š Dashboard - toutes Etudes"])
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["👥 Gestion - ARCs", "📚 Gestion - Etudes", "📈 Dashboard - par ARC", "📊 Dashboard - tous ARCs",  "📈 Dashboard - par Etude", "📊 Dashboard - toutes Etudes"])
 
     # ----------------------------------------------------------------------------------------------------------
         with tab1:
@@ -569,7 +579,7 @@ def main():
                         arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, ARC=new_arc_name, MDP=new_arc_password)
                         create_time_files_for_arcs(arc_df)
                         create_ongoing_files_for_arcs(arc_df) 
-                        st.success(f"Nouvel ARC '{new_arc_name}' ajoutÃ© avec succÃ¨s.")
+                        st.success(f"Nouvel ARC '{new_arc_name}' ajouté avec succès.")
                         st.rerun()
                     else:
                         st.error("Veuillez remplir le nom de l'ARC et le mot de passe.")
@@ -577,10 +587,10 @@ def main():
             with col_delete:
                 st.markdown("#### Archivage d'un ARC")
                 arc_options = arc_df['ARC'].dropna().astype(str).tolist()
-                arc_to_delete = st.selectbox("Choisir un ARC Ã  archiver", sorted(arc_options))
-                if st.button("Archiver l'ARC sÃ©lectionnÃ©"):
+                arc_to_delete = st.selectbox("Choisir un ARC à archiver", sorted(arc_options))
+                if st.button("Archiver l'ARC sélectionné"):
                     arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
-                    st.success(f"ARC '{arc_to_delete}' archivÃ© avec succÃ¨s.")
+                    st.success(f"ARC '{arc_to_delete}' archivé avec succès.")
                     st.rerun()
 
             with col_modify:
@@ -594,7 +604,7 @@ def main():
                 # Button to save changes
                 if st.button('Sauvegarder les modifications'):
                     save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
-                    st.success('Modifications sauvegardÃ©es avec succÃ¨s.')
+                    st.success('Modifications sauvegardées avec succès.')
                     st.rerun()
 
     # ----------------------------------------------------------------------------------------------------------
@@ -605,30 +615,30 @@ def main():
 
             col_add, _, col_delete, _, col_modify = st.columns([3, 1, 3, 1, 3])
             with col_add:
-                st.markdown("#### Ajout d'une nouvelle Ã©tude")
-                new_study_name = st.text_input("Nom de l'Ã©tude", key="new_study_name")
+                st.markdown("#### Ajout d'une nouvelle étude")
+                new_study_name = st.text_input("Nom de l'étude", key="new_study_name")
                 new_study_primary_arc = st.selectbox(f"ARC Principal", arc_options, key="new_study_arc_principal")
                 new_study_backup_arc = st.selectbox("ARC de backup (optionnel)", arc_options, key=f"new_study_arc_backup", help="Optionnel")
 
                 col_add, col_list = st.columns(2)
                 with col_add:
-                    if st.button("Ajouter l'Ã©tude"):
+                    if st.button("Ajouter l'étude"):
                         if new_study_name and new_study_primary_arc:  # Minimal validation
                             # Adding the new study
                             study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
                                                      STUDY=new_study_name, 
                                                      ARC=new_study_primary_arc, 
                                                      ARC_BACKUP=new_study_backup_arc if new_study_backup_arc else "")
-                            st.success(f"Nouvelle Ã©tude '{new_study_name}' ajoutÃ©e avec succÃ¨s.")
+                            st.success(f"Nouvelle étude '{new_study_name}' ajoutée avec succès.")
                             st.rerun()
                         else:
-                            st.error("Le nom de l'Ã©tude et l'ARC principal sont requis.")
+                            st.error("Le nom de l'étude et l'ARC principal sont requis.")
                 with col_list:
                     study_names = load_all_study_names(BUCKET_NAME)
                     study_names_df = pd.DataFrame(study_names, columns=['Study Name'])
                     excel_data = convert_df_to_excel(study_names_df)
                     st.download_button(
-                        label="Liste des Ã©tudes en cours et archivÃ©es",
+                        label="Liste des études en cours et archivées",
                         data=excel_data,
                         file_name='liste_etudes.xlsx',
                         mime='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -636,16 +646,16 @@ def main():
 
 
             with col_delete:
-                st.markdown("#### Archivage d'une Ã©tude")
+                st.markdown("#### Archivage d'une étude")
                 study_options = study_df['STUDY'].dropna().astype(str).tolist()
-                study_to_delete = st.selectbox("Choisir une Ã©tude Ã  archiver", sorted(study_options))
-                if st.button("Archiver l'Ã©tude sÃ©lectionnÃ©e"):
+                study_to_delete = st.selectbox("Choisir une étude à archiver", sorted(study_options))
+                if st.button("Archiver l'étude sélectionnée"):
                     study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
-                    st.success(f"L'Ã©tude '{study_to_delete}' est archivÃ©e avec succÃ¨s.")
+                    st.success(f"L'étude '{study_to_delete}' est archivée avec succès.")
                     st.rerun()
 
             with col_modify:
-                st.markdown("#### Affectation des Ã©tudes")
+                st.markdown("#### Affectation des études")
                 for i, row in study_df.iterrows():
                     with st.expander(f"{row['STUDY']}"):
                         # Find the index of the current primary ARC in the options, treating 'nan' as 'None'
@@ -667,7 +677,7 @@ def main():
                 # Global button to save all modifications
                 if st.button('Sauvegarder les modifications', key=19):
                     save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
-                    st.success('Modifications sauvegardÃ©es avec succÃ¨s.')
+                    st.success('Modifications sauvegardées avec succès.')
                     st.rerun() 
 
     # ----------------------------------------------------------------------------------------------------------
@@ -678,7 +688,7 @@ def main():
                 arc = st.selectbox("Choix de l'ARC", list(ARC_PASSWORDS.keys()), key=2)
 
             with col_year:
-                year_choice = st.selectbox("AnnÃ©e", YEARS, key=3, index=YEARS.index(datetime.datetime.now().year))
+                year_choice = st.selectbox("Année", YEARS, key=3, index=YEARS.index(datetime.datetime.now().year))
 
             # I. Data Loading
             df_data = load_data(arc)
@@ -729,7 +739,7 @@ def main():
             st.write("---")
 
             # Study selection with multiselect
-            sel_studies = st.multiselect("Choisir une ou plusieurs Ã©tudes", options=associated_studies, default=associated_studies, key=10)
+            sel_studies = st.multiselect("Choisir une ou plusieurs études", options=associated_studies, default=associated_studies, key=10)
             num_studies = len(sel_studies)
 
             # Calculate the number of rows needed for two columns
@@ -782,23 +792,23 @@ def main():
                     except:
                         pass
                 else:
-                    st.error(f"Le dataframe pour {arc} n'a pas pu Ãªtre chargÃ©.")
+                    st.error(f"Le dataframe pour {arc} n'a pas pu être chargé.")
 
             col_month, col_year = st.columns(2)
             
             # For the chart of the last 5 weeks
             with col_month:
-                generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Ã‰volution Hebdomadaire", mode='last_5_weeks')
+                generate_time_series_chart({arc: data['last_5_weeks'] for arc, data in dfs.items()}, "Évolution Hebdomadaire", mode='last_5_weeks')
 
             # For the chart of the current year
             with col_year:
-                generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Ã‰volution Hebdomadaire en {current_year}", mode='year')
+                generate_time_series_chart({arc: data['current_year'] for arc, data in dfs.items()}, f"Évolution Hebdomadaire en {current_year}", mode='year')
 
     # ----------------------------------------------------------------------------------------------------------
         with tab5:
             # Study selection
             study_names = load_all_study_names(BUCKET_NAME)
-            study_choice = st.selectbox("Choisissez votre Ã©tude (en cours et archivÃ©es)", study_names)
+            study_choice = st.selectbox("Choisissez votre étude (en cours et archivées)", study_names)
 
             # Loading and combining data from all ARCs
             all_arcs_df = pd.DataFrame()
@@ -824,10 +834,10 @@ def main():
             col_table, _, col_graph = st.columns([1.5, 0.2, 2])
 
             with col_table:
-                st.write(f"Temps passÃ© sur l'Ã©tude {study_choice}, par catÃ©gorie d'activitÃ© :")
+                st.write(f"Temps passé sur l'étude {study_choice}, par catégorie d'activité :")
                 
                 # Start with a Markdown header for the table
-                markdown_table = "CatÃ©gorie | Actions rÃ©alisÃ©es\n:- | -:\n"
+                markdown_table = "Catégorie | Actions réalisées\n:- | -:\n"
                 
                 # Add each category and corresponding time in Markdown format
                 for category, hours in total_time_by_category.items():
@@ -843,9 +853,9 @@ def main():
                 # Ensure total_time_by_category is defined before this line
                 total_time_by_category = total_time_by_category[total_time_by_category > 0]
                 if total_time_by_category.sum() > 0:
-                    plot_pie_chart_on_ax(total_time_by_category, f"RÃ©partition des actions par catÃ©gorie pour l'Ã©tude {study_choice}", ax)
+                    plot_pie_chart_on_ax(total_time_by_category, f"Répartition des actions par catégorie pour l'étude {study_choice}", ax)
                 else:
-                    ax.text(0.5, 0.5, f"Aucune donnÃ©e disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes) # Correct reference to study choice variable and positioning
+                    ax.text(0.5, 0.5, f"Aucune donnée disponible\npour {study_choice}", ha='center', va='center', transform=ax.transAxes) # Correct reference to study choice variable and positioning
                     ax.set_axis_off()  # Hide axes if no data
                 st.pyplot(fig)
                 
@@ -853,7 +863,7 @@ def main():
             col_arc, col_scr, col_rand, col_eos, col_calc= st.columns([2, 1, 1, 1, 1])
 
             with col_arc:
-                st.write(f"Temps total passÃ© par ARC sur l'Ã©tude {study_choice} :")
+                st.write(f"Temps total passé par ARC sur l'étude {study_choice} :")
                 
                 # Group data by ARC and calculate total
                 total_time_by_arc = filtered_df_by_study.groupby('ARC')['TOTAL'].sum()
@@ -866,14 +876,14 @@ def main():
                         markdown_table += f"{arc} | {total_hours:.2f}\n"
                     st.markdown(markdown_table)
                 else:
-                    st.write("Aucune donnÃ©e disponible pour cette Ã©tude.")
+                    st.write("Aucune donnée disponible pour cette étude.")
             with col_scr:
                 screened_pat = int(filtered_df_by_study['NB_PAT_SCR'].sum())
                 st.metric(label="Nombre total de patients inclus", value=screened_pat)
 
             with col_rand:
                 rando_pat = int(filtered_df_by_study['NB_PAT_RAN'].sum())
-                st.metric(label="Nombre total de patients randomisÃ©s", value=rando_pat)
+                st.metric(label="Nombre total de patients randomisés", value=rando_pat)
 
             with col_eos:
                 eos_pat = int(filtered_df_by_study['NB_EOS'].sum())
@@ -891,7 +901,7 @@ def main():
 
             col_year, col_month, _ = st.columns([1, 3, 3])
             with col_year:
-                year_choice = st.selectbox("AnnÃ©e", YEARS, key=13, index=YEARS.index(datetime.datetime.now().year))
+                year_choice = st.selectbox("Année", YEARS, key=13, index=YEARS.index(datetime.datetime.now().year))
             with col_month:
                 # Ensure the month choice uses a different key
                 selected_month_name = st.select_slider("Mois", options=month_names, 
@@ -927,7 +937,7 @@ def main():
 
             col_graph1, col_graph2 = st.columns([3, 3])
             with col_graph1:
-                create_bar_chart(df_activities_month_sorted, 'Heures PassÃ©es par Ã‰tude', selected_month_name)
+                create_bar_chart(df_activities_month_sorted, 'Heures Passées par Étude', selected_month_name)
             with col_graph2:
                 df_patient_included_month = filtered_month_df.groupby('STUDY').sum()
                 create_bar_chart(df_patient_included_month, "Nombre d'inclusions", selected_month_name, 'NB_PAT_SCR', y_axis="")
