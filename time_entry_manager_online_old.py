@@ -10,18 +10,20 @@ import locale
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import boto3
 from io import StringIO, BytesIO
 import math
+from botocore.exceptions import ClientError
 
 
 #####################################################################
 # =========================== CONSTANTS =========================== #
 #####################################################################
 
+BUCKET_NAME = "imotion"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 STUDY_INFO_FILE = "STUDY.csv"
-# PASSWORD = os.getenv('APP_MDP')
-PASSWORD = "Masa2024"
+PASSWORD = os.getenv('APP_MDP')
 YEARS = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'TOTAL', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
 'ARCHIVAGE EMAIL', 'MAJ DOC', 'AUDIT & INSPECTION', 'CLOTURE', 'NB_VISITE', 'NB_PAT_SCR', 'NB_PAT_RAN', 'NB_EOS', 'COMMENTAIRE']
@@ -41,24 +43,41 @@ SHAPE_BOX = {
 # ========================= GENERAL INFO ========================== #
 #####################################################################
 
-def load_csv_from_local(file_name, sep=';', encoding='utf-8'):
+s3_client = boto3.client(
+    's3',
+    region_name='eu-west-3',
+    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+)
+
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):
     """
-    Loads a CSV file from the local "imotion" folder and converts it into a pandas DataFrame.
+    Loads a CSV file from a specified S3 bucket and converts it into a pandas DataFrame.
 
     Parameters:
+    - bucket_name (str): The name of the S3 bucket from which to load the file.
     - file_name (str): The name of the file to load.
     - sep (str, optional): The column separator in the CSV file. Defaults to ';'.
     - encoding (str, optional): The encoding of the CSV file. Defaults to 'utf-8'.
 
     Returns:
     - pandas.DataFrame: A DataFrame containing the data from the loaded CSV file.
+                         Returns None if loading fails.
     """
-    file_path = os.path.join("imotion", file_name)
+    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
     try:
-        return pd.read_csv(file_path, encoding=encoding, sep=sep)
-    except UnicodeDecodeError:
-        return pd.read_csv(file_path, encoding='latin1', sep=sep)
-    except FileNotFoundError:
+        obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
+        body = obj['Body'].read().decode(encoding)
+        
+        try:
+            # Try reading the file with utf-8 encoding
+            return pd.read_csv(StringIO(body), encoding='utf-8', sep=sep)
+        except UnicodeDecodeError:
+            return pd.read_csv(StringIO(body), encoding='latin1', sep=sep)
+        except FileNotFoundError:
+            return None
+    except Exception as e:
+        st.write("S3 Access Error:", e)
         return None
         
 
@@ -77,10 +96,10 @@ def load_arc_passwords():
     """
     try:
         # Try loading the file with UTF-8 encoding
-        df = load_csv_from_local(ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
         # If an encoding error occurs, try loading with Latin1 encoding
-        df = load_csv_from_local(ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
 
     # Verify if df is not None and has the expected columns
     if df is not None and 'ARC' in df.columns and 'MDP' in df.columns:
@@ -112,36 +131,38 @@ def load_data(arc):
     file_name = f"Time_{arc}.csv"
     try:
         # Try loading the file with UTF-8 encoding
-        return load_csv_from_local(file_name, sep=';', encoding='utf-8')
+        return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
         # If an encoding error occurs, try loading with Latin1 encoding
-        return load_csv_from_local(file_name, sep=';', encoding='latin1')
+        return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
-def load_all_study_names():
+def load_all_study_names(bucket_name):
     """
-    Lists all unique study names from CSV files prefixed with "Time_" in the local "imotion" folder.
+    Lists all unique study names from CSV files prefixed with "Time_" in a specified S3 bucket.
+
+    Parameters:
+    - bucket_name (str): The name of the S3 bucket to query.
 
     Returns:
     - list: A sorted list of unique study names.
     """
-    folder_path = "imotion"  # Chemin du dossier contenant les fichiers CSV
+    # Use boto3 to list objects in the S3 bucket
+    response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix="Time_")
+    
+    # Set to store unique study names
     unique_studies = set()
 
-    # Vérifier que le dossier existe
-    if not os.path.exists(folder_path):
-        return []
-
-    # Parcourir tous les fichiers du dossier
-    for file_name in os.listdir(folder_path):
-        if file_name.startswith("Time_") and file_name.endswith(".csv"):
-            file_path = os.path.join(folder_path, file_name)
-
-            # Charger le fichier CSV
-            df = pd.read_csv(file_path, sep=';', encoding='utf-8')
-
-            if not df.empty and "STUDY" in df.columns:
-                unique_studies.update(df['STUDY'].dropna().unique())
-
+    if 'Contents' in response:
+        # Iterate over each file that starts with "Time_"
+        for obj in response['Contents']:
+            file_key = obj['Key']
+            arc_name = file_key.split('_')[1].split('.')[0]  # Extract the ARC name from the file name in the bucket
+            
+            # Load data from S3
+            df = load_csv_from_s3(bucket_name, file_key, sep=';', encoding='utf-8')
+            if not df.empty:
+                unique_studies.update(df['STUDY'].unique())
+    
     return sorted(list(unique_studies))
 
 def load_arc_info():
@@ -151,7 +172,7 @@ def load_arc_info():
     Returns:
     - pandas.DataFrame: A DataFrame containing ARC information.
     """
-    return load_csv_from_local(ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
+    return load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
 
 def load_study_info():
     """
@@ -160,22 +181,32 @@ def load_study_info():
     Returns:
     - pandas.DataFrame: A DataFrame containing study information.
     """
-    # Use the load_csv_from_local function with the file name STUDY_INFO_FILE and appropriate parameters
-    return load_csv_from_local(STUDY_INFO_FILE, sep=';', encoding='utf-8')
+    # Use the load_csv_from_s3 function with the file name STUDY_INFO_FILE and appropriate parameters
+    return load_csv_from_s3(BUCKET_NAME, STUDY_INFO_FILE, sep=';', encoding='utf-8')
 
 # ========================================================================================================================================
 # SAVE
-def save_data_to_local(file_name, df):
+def save_data_to_s3(bucket_name, file_name, df):
     """
-    Saves a DataFrame to a CSV file in the local "imotion" folder.
+    Saves a DataFrame to a CSV file on S3.
 
     Parameters:
+    - bucket_name (str): The name of the S3 bucket where the file will be saved.
     - file_name (str): The name under which the file will be saved.
     - df (pandas.DataFrame): The DataFrame to be saved.
-    """
-    file_path = os.path.join("imotion", file_name)
-    df.to_csv(file_path, index=False, sep=';', encoding='utf-8')
 
+    Returns:
+    None
+    """
+    # Convert the DataFrame to CSV using StringIO
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    
+    # Reset the pointer to the beginning of the stream
+    csv_buffer.seek(0)
+    
+    # Upload the CSV to the S3 bucket
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 def convert_df_to_excel(df):
     """
@@ -384,7 +415,7 @@ def calculate_weeks():
 # CREATION AND MODIFICATION
 def create_time_files_for_arcs(df):
     """
-    Checks and creates, if necessary, an empty CSV file for each ARC mentioned in a DataFrame, in the local "imotion" folder.
+    Checks and creates, if necessary, an empty file for each ARC mentioned in a DataFrame, in an S3 bucket.
 
     Parameters:
     - df (pandas.DataFrame): DataFrame containing at least one 'ARC' column with ARC names.
@@ -392,18 +423,24 @@ def create_time_files_for_arcs(df):
     Returns:
     None
     """
-    os.makedirs("imotion", exist_ok=True)  # Assure que le dossier existe
-
-    for arc_name in df['ARC'].dropna().unique():  # Filtrer les valeurs NaN et obtenir des noms uniques
-        file_path = os.path.join("imotion", f"Time_{arc_name}.csv")
-        
-        if not os.path.exists(file_path):  # Vérifie si le fichier existe déjà
-            new_df = pd.DataFrame(columns=CATEGORIES)  # Crée un nouveau DataFrame avec les colonnes souhaitées
-            new_df.to_csv(file_path, index=False, sep=';', encoding='utf-8')  # Sauvegarde en local
+    for arc_name in df['ARC'].dropna().unique():  # Make sure to filter out NaN values and work with unique names
+        file_name = f"Time_{arc_name}.csv"
+        try:
+            # Attempt to retrieve object metadata to see if it already exists
+            s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
+            # If no exception is raised, the file already exists, so we won't create it
+        except: 
+            # The file does not exist, you can create the file
+            new_df = pd.DataFrame(columns=CATEGORIES)  # Create a new DataFrame with desired columns
+            csv_buffer = StringIO()
+            new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+            csv_buffer.seek(0)  # Return to the beginning of the buffer to read its content
+            # Send CSV content to the file in S3
+            s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
 def create_ongoing_files_for_arcs(df):
     """
-    Checks and creates, if necessary, an empty ongoing CSV file for each ARC mentioned in a DataFrame, in the local "imotion" folder.
+    Checks and creates, if necessary, an empty ongoing file for each ARC mentioned in a DataFrame, in an S3 bucket.
 
     Parameters:
     - df (pandas.DataFrame): DataFrame containing at least one 'ARC' column with ARC names.
@@ -411,66 +448,74 @@ def create_ongoing_files_for_arcs(df):
     Returns:
     None
     """
-    os.makedirs("imotion", exist_ok=True)  # S'assurer que le dossier "imotion" existe
+    for arc_name in df['ARC'].dropna().unique():  # Ensure uniqueness and absence of NaN values
+        file_name = f"Ongoing_{arc_name}.csv"
 
-    for arc_name in df['ARC'].dropna().unique():  # Filtrer les valeurs NaN et obtenir des noms uniques
-        file_path = os.path.join("imotion", f"Ongoing_{arc_name}.csv")
-        
-        if not os.path.exists(file_path):  # Vérifier si le fichier existe déjà
-            new_df = pd.DataFrame(columns=CATEGORIES)  # Créer un nouveau DataFrame avec les colonnes souhaitées
-            new_df.to_csv(file_path, index=False, sep=';', encoding='utf-8')  # Sauvegarde locale
+        try:
+            # Attempt to load the file to check its existence
+            s3_client.head_object(Bucket=BUCKET_NAME, Key=file_name)
+        except:
+            # If an exception is raised, it usually means the file doesn't exist
+            # Create a new DataFrame with desired columns
+            new_df = pd.DataFrame(columns=CATEGORIES)
+            csv_buffer = StringIO()
+            new_df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+            csv_buffer.seek(0)  # Return to the beginning of the buffer to read its content
+            # Send CSV content to the file in S3
+            s3_client.put_object(Bucket=BUCKET_NAME, Key=file_name, Body=csv_buffer.getvalue())
 
-
-def add_row_to_df_local(file_name, df, **kwargs):
+def add_row_to_df_s3(bucket_name, file_name, df, **kwargs):
     """
-    Adds a new row to a DataFrame and saves the updated DataFrame to a CSV file locally in the "imotion" folder.
+    Adds a new row to a DataFrame and saves the updated DataFrame to a CSV file on S3.
 
     Parameters:
-    - file_name (str): The name of the CSV file.
-    - df (pandas.DataFrame): The DataFrame to which the new row will be added.
+    - bucket_name (str): The name of the S3 bucket.
+    - file_name (str): The name of the CSV file on S3.
+    - df (pandas.DataFrame): The DataFrame to which to add the new row.
     - **kwargs: The values of the new row to add.
 
     Returns:
     - pandas.DataFrame: The updated DataFrame.
     """
-    file_path = os.path.join("imotion", file_name)
-
-    # S'assurer que le dossier "imotion" existe
-    os.makedirs("imotion", exist_ok=True)
-
-    # Créer une nouvelle ligne à partir des kwargs
-    new_row = pd.DataFrame([kwargs])
-
-    # Ajouter la nouvelle ligne au DataFrame existant
+    # Create a new row from the kwargs
+    new_row = pd.DataFrame(kwargs, index=[0])
+    # Concatenate the new row to the existing DataFrame
     df = pd.concat([df, new_row], ignore_index=True)
 
-    # Sauvegarder le DataFrame mis à jour en local
-    df.to_csv(file_path, index=False, sep=';', encoding='utf-8')
+    # Convert the updated DataFrame to CSV string
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    csv_buffer.seek(0)  # Return to the beginning of the buffer to read its content
+    
+    # Save the updated DataFrame
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
     return df
 
-
-def delete_row_local(file_name, df, row_to_delete):
+def delete_row_s3(bucket_name, file_name, df, row_to_delete):
     """
-    Deletes a specific row from a DataFrame and updates the corresponding CSV file locally in the "imotion" folder.
+    Deletes a specific row from a DataFrame and updates the corresponding file on S3.
 
     Parameters:
-    - file_name (str): The name of the CSV file.
+    - bucket_name (str): The name of the S3 bucket where the file is stored.
+    - file_name (str): The name of the CSV file on S3 to update.
     - df (pandas.DataFrame): The DataFrame from which to delete the row.
     - row_to_delete (int): The index of the row to delete in the DataFrame.
 
     Returns:
     - pandas.DataFrame: The DataFrame after deleting the row.
     """
-    file_path = os.path.join("imotion", file_name)
-
-    # Vérifier que l'index existe dans le DataFrame avant de le supprimer
-    if row_to_delete in df.index:
-        df = df.drop(row_to_delete).reset_index(drop=True)  # Supprime la ligne et réindexe proprement
-
-        # Sauvegarder le DataFrame mis à jour en local
-        df.to_csv(file_path, index=False, sep=';', encoding='utf-8')
-
+    # Delete the specified row from the DataFrame
+    df = df.drop(row_to_delete)
+    
+    # Convert the updated DataFrame to a CSV string
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=';', encoding='utf-8')
+    csv_buffer.seek(0)  # Return to the beginning of the buffer to read its content
+    
+    # Save the updated DataFrame to S3
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
+    
     return df
 
 
@@ -531,7 +576,7 @@ def main():
                 new_arc_password = st.text_input("Mot de passe pour le nouvel ARC", key="new_arc_mdp")
                 if st.button("Ajouter l'ARC"):
                     if new_arc_name and new_arc_password:  # Check if fields are not empty
-                        arc_df = add_row_to_df_local(ARC_PASSWORDS_FILE, arc_df, ARC=new_arc_name, MDP=new_arc_password)
+                        arc_df = add_row_to_df_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, ARC=new_arc_name, MDP=new_arc_password)
                         create_time_files_for_arcs(arc_df)
                         create_ongoing_files_for_arcs(arc_df) 
                         st.success(f"Nouvel ARC '{new_arc_name}' ajouté avec succès.")
@@ -544,7 +589,7 @@ def main():
                 arc_options = arc_df['ARC'].dropna().astype(str).tolist()
                 arc_to_delete = st.selectbox("Choisir un ARC à archiver", sorted(arc_options))
                 if st.button("Archiver l'ARC sélectionné"):
-                    arc_df = delete_row_local(arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
+                    arc_df = delete_row_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df, arc_df[arc_df['ARC'] == arc_to_delete].index)
                     st.success(f"ARC '{arc_to_delete}' archivé avec succès.")
                     st.rerun()
 
@@ -558,7 +603,7 @@ def main():
                             arc_df.at[i, 'MDP'] = new_password
                 # Button to save changes
                 if st.button('Sauvegarder les modifications'):
-                    save_data_to_local(ARC_PASSWORDS_FILE, arc_df)
+                    save_data_to_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, arc_df)
                     st.success('Modifications sauvegardées avec succès.')
                     st.rerun()
 
@@ -580,7 +625,7 @@ def main():
                     if st.button("Ajouter l'étude"):
                         if new_study_name and new_study_primary_arc:  # Minimal validation
                             # Adding the new study
-                            study_df = add_row_to_df_local(STUDY_INFO_FILE, study_df,
+                            study_df = add_row_to_df_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df,
                                                      STUDY=new_study_name, 
                                                      ARC=new_study_primary_arc, 
                                                      ARC_BACKUP=new_study_backup_arc if new_study_backup_arc else "")
@@ -589,7 +634,7 @@ def main():
                         else:
                             st.error("Le nom de l'étude et l'ARC principal sont requis.")
                 with col_list:
-                    study_names = load_all_study_names()
+                    study_names = load_all_study_names(BUCKET_NAME)
                     study_names_df = pd.DataFrame(study_names, columns=['Study Name'])
                     excel_data = convert_df_to_excel(study_names_df)
                     st.download_button(
@@ -605,7 +650,7 @@ def main():
                 study_options = study_df['STUDY'].dropna().astype(str).tolist()
                 study_to_delete = st.selectbox("Choisir une étude à archiver", sorted(study_options))
                 if st.button("Archiver l'étude sélectionnée"):
-                    study_df = delete_row_local(STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
+                    study_df = delete_row_s3(BUCKET_NAME, STUDY_INFO_FILE ,study_df, study_df[study_df['STUDY'] == study_to_delete].index)
                     st.success(f"L'étude '{study_to_delete}' est archivée avec succès.")
                     st.rerun()
 
@@ -631,7 +676,7 @@ def main():
 
                 # Global button to save all modifications
                 if st.button('Sauvegarder les modifications', key=19):
-                    save_data_to_local(STUDY_INFO_FILE, study_df)
+                    save_data_to_s3(BUCKET_NAME, STUDY_INFO_FILE, study_df)
                     st.success('Modifications sauvegardées avec succès.')
                     st.rerun() 
 
@@ -762,7 +807,7 @@ def main():
     # ----------------------------------------------------------------------------------------------------------
         with tab5:
             # Study selection
-            study_names = load_all_study_names()
+            study_names = load_all_study_names(BUCKET_NAME)
             study_choice = st.selectbox("Choisissez votre étude (en cours et archivées)", study_names)
 
             # Loading and combining data from all ARCs

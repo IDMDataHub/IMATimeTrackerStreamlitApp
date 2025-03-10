@@ -7,6 +7,7 @@ import pandas as pd
 import datetime
 import locale
 import os
+import boto3
 from io import StringIO, BytesIO
 import sys
 
@@ -15,6 +16,7 @@ import sys
 # =========================== CONSTANTS =========================== #
 #####################################################################
 
+BUCKET_NAME = "imotion"
 ARC_PASSWORDS_FILE = "ARC_MDP.csv"
 YEARS = list(range(2024, 2030))
 CATEGORIES = ['YEAR', 'WEEK', 'STUDY', 'TOTAL', 'MISE EN PLACE', 'TRAINING', 'VISITES', 'SAISIE CRF', 'QUERIES', 'MONITORING', 'REMOTE', 'REUNIONS', 
@@ -50,40 +52,44 @@ COLUMN_CONFIG = {
 }
 
 
-def load_csv_from_local(file_name, sep=';', encoding='utf-8'):
+s3_client = boto3.client(
+    's3',
+    aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+    aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY')
+)
+
+def load_csv_from_s3(bucket_name, file_name, sep=';', encoding='utf-8'):    
     """
-    Load a CSV file from the local "imotion" folder into a pandas DataFrame.
+    Load a CSV file from an AWS S3 bucket using boto3, then read it into a pandas DataFrame.
 
     Parameters:
-    - file_name (str): Name of the file to load from the "imotion" folder.
+    - bucket_name (str): Name of the S3 bucket where the file is located.
+    - file_name (str): Name of the file to load from the S3 bucket.
     - sep (str, optional): Field separator in the CSV file. Default is ';'.
     - encoding (str, optional): Encoding of the CSV file. Default is 'utf-8'.
 
     Returns:
     - pandas.DataFrame: A DataFrame containing the data from the CSV file.
-    
+
     Raises:
-    - FileNotFoundError: If the file does not exist.
-    - UnicodeDecodeError: If there is an encoding issue.
+    - Exception: Raises an exception if loading the file fails for any reason.
     """
-    file_path = os.path.join("imotion", file_name)
+    # Use boto3 to access S3 and load the specified file
+    obj = s3_client.get_object(Bucket=bucket_name, Key=file_name)
+    body = obj['Body'].read().decode(encoding)
+    
+    # Use pandas to read the CSV
+    data = pd.read_csv(StringIO(body), sep=sep)
+    return data
 
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"Le fichier {file_name} n'existe pas dans le dossier 'imotion'.")
-
-    try:
-        return pd.read_csv(file_path, sep=sep, encoding=encoding)
-    except UnicodeDecodeError:
-        return pd.read_csv(file_path, sep=sep, encoding='latin1')
-
-
-def save_csv_to_local(df, file_name, sep=';', encoding='utf-8'):
+def save_csv_to_s3(df, bucket_name, file_name, sep=';', encoding='utf-8'):
     """
-    Save a pandas DataFrame to a CSV file in the local "imotion" folder.
+    Save a pandas DataFrame to a CSV file on an AWS S3 bucket using boto3.
 
     Parameters:
     - df (pandas.DataFrame): The DataFrame to be saved.
-    - file_name (str): The name under which the CSV file will be saved in the "imotion" folder.
+    - bucket_name (str): The name of the S3 bucket where the file will be saved.
+    - file_name (str): The name under which the CSV file will be saved in the S3 bucket.
     - sep (str, optional): The field separator to use in the CSV file. Default is ';'.
     - encoding (str, optional): The encoding of the CSV file. Default is 'utf-8'.
 
@@ -93,16 +99,15 @@ def save_csv_to_local(df, file_name, sep=';', encoding='utf-8'):
     Raises:
     - Exception: Raises an exception if the saving fails for any reason.
     """
-    file_path = os.path.join("imotion", file_name)
-
-    # S'assurer que le dossier "imotion" existe
-    os.makedirs("imotion", exist_ok=True)
-
-    try:
-        # Sauvegarder le DataFrame en local
-        df.to_csv(file_path, index=False, sep=sep, encoding=encoding)
-    except Exception as e:
-        raise Exception(f"Erreur lors de la sauvegarde du fichier {file_name}: {e}")
+    # Convert the DataFrame to CSV
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=sep, encoding=encoding)
+    
+    # Reset the buffer cursor to the beginning
+    csv_buffer.seek(0)
+    
+    # Use s3_client to save the CSV file to S3
+    s3_client.put_object(Bucket=bucket_name, Key=file_name, Body=csv_buffer.getvalue())
 
 def load_arc_passwords():
     """
@@ -120,10 +125,10 @@ def load_arc_passwords():
     """
     try:
         # Attempt to load the file with UTF-8 encoding
-        df = load_csv_from_local(ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
         # If encoding error occurs, attempt to load with Latin1 encoding
-        df = load_csv_from_local(ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
+        df = load_csv_from_s3(BUCKET_NAME, ARC_PASSWORDS_FILE, sep=';', encoding='latin1')
     return dict(zip(df['ARC'], df['MDP']))
 
 ARC_PASSWORDS = load_arc_passwords()
@@ -160,18 +165,14 @@ def load_data(arc):
     file_name = f"Time_{arc}.csv"  # Name of the file in the S3 bucket
     try:
         # Attempt to load the file with UTF-8 encoding
-        return load_csv_from_local(file_name, sep=';', encoding='utf-8')
+        return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except UnicodeDecodeError:
         # If an encoding error occurs, attempt to load with Latin1 encoding
-        return load_csv_from_local(file_name, sep=';', encoding='latin1')
-
-import os
-import pandas as pd
-
+        return load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='latin1')
 
 def load_time_data(arc, week):
     """
-    Load time data for a specific ARC and given week from a CSV file stored in the local "imotion" folder.
+    Load time data for a specific ARC and given week from a CSV file stored in S3.
 
     Parameters:
     - arc (str): The identifier of the ARC for which to load the data.
@@ -179,32 +180,22 @@ def load_time_data(arc, week):
 
     Returns:
     - pandas.DataFrame: A DataFrame containing filtered time data for the specified ARC and week.
-      If an error occurs during loading, an empty DataFrame is returned.
+    If an error occurs during loading, an empty DataFrame is returned.
 
     Raises:
-    - FileNotFoundError: If the CSV file does not exist.
-    - Exception: If any other error occurs during data loading.
+    - Exception: Raises an exception if an error occurs during data loading from S3.
     """
-    file_name = f"Time_{arc}.csv"
-    file_path = os.path.join("imotion", file_name)
-
-    # Vérifier si le fichier existe avant d'essayer de le charger
-    if not os.path.exists(file_path):
-        print(f"Le fichier {file_name} n'existe pas dans le dossier 'imotion'.")
-        return pd.DataFrame()
-
+    file_name = f"Time_{arc}.csv"  # Name of the file in the S3 bucket
+    
+    # Attempt to load the file from S3
     try:
-        df = pd.read_csv(file_path, sep=';', encoding='utf-8')
-        # Vérifier que la colonne 'WEEK' existe avant de filtrer
-        if 'WEEK' in df.columns:
-            return df[df['WEEK'] == week]
-        else:
-            print(f"Erreur : La colonne 'WEEK' est absente dans {file_name}.")
-            return pd.DataFrame()
+        df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
+        # Filter the data for the specified week
+        return df[df['WEEK'] == week]
     except Exception as e:
-        print(f"Erreur lors du chargement des données depuis le fichier local {file_name} : {e}")
+        # Error handling, for example if the file does not exist
+        print(f"Erreur lors du chargement des données depuis S3 : {e}")
         return pd.DataFrame()
-
         
 def load_assigned_studies_with_roles(arc):
     """
@@ -224,7 +215,7 @@ def load_assigned_studies_with_roles(arc):
     file_name = "STUDY.csv"  # Name of the file in the S3 bucket
     
     # Load the study data from the CSV file in the S3 bucket into a DataFrame
-    df_study = load_csv_from_local(file_name, sep=';', encoding='utf-8')
+    df_study = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     
     # Create a new column 'ROLE' to identify if the ARC is 'Principal' or 'Backup' for each study
     df_study['ROLE'] = df_study.apply(lambda row: 'Principal' if row['ARC'] == arc else 'Backup' if row['ARC_BACKUP'] == arc else None, axis=1)
@@ -253,7 +244,7 @@ def load_assigned_studies(arc):
     file_name = "STUDY.csv"  # Name of the file in the S3 bucket
     
     # Load the file from S3
-    df_study = load_csv_from_local(file_name, sep=';', encoding='utf-8')
+    df_study = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     
     # Filter to get studies assigned to the specified ARC
     assigned_studies = df_study[(df_study['ARC'] == arc) | (df_study['ARC_BACKUP'] == arc)]
@@ -279,7 +270,7 @@ def load_weekly_data(arc, week):
     
     # Attempt to load the file from S3
     try:
-        df = load_csv_from_local(file_name, sep=';', encoding='utf-8')
+        df = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
         # Filter the data for the specified week and return the DataFrame
         return df[df['WEEK'] == week]
     except Exception as e:
@@ -291,7 +282,7 @@ def load_weekly_data(arc, week):
 # SAVE
 def save_data(df, arc):
     """
-    Save DataFrame data to a specific ARC's CSV file in the local "imotion" folder.
+    Save DataFrame data to a specific ARC's CSV file on S3.
 
     Parameters:
     - df (pandas.DataFrame): The DataFrame containing the data to be saved.
@@ -304,16 +295,16 @@ def save_data(df, arc):
     - Exception: Raises an exception if the save operation fails for any reason.
     """
     file_name = f"Time_{arc}.csv"
-    file_path = os.path.join("imotion", file_name)
-
-    # S'assurer que le dossier "imotion" existe
-    os.makedirs("imotion", exist_ok=True)
-
-    try:
-        # Sauvegarder le DataFrame en local
-        df.to_csv(file_path, index=False, sep=";", encoding='utf-8')
-    except Exception as e:
-        raise Exception(f"Erreur lors de la sauvegarde du fichier {file_name}: {e}")
+    
+    # Convert the DataFrame to a CSV string
+    csv_buffer = StringIO()
+    df.to_csv(csv_buffer, index=False, sep=";", encoding='utf-8')
+    
+    # Reset the cursor position to the beginning of the buffer
+    csv_buffer.seek(0)
+    
+    # Send the CSV content to the S3 bucket
+    s3_client.put_object(Bucket=BUCKET_NAME, Body=csv_buffer.getvalue(), Key=file_name)
 
 # ========================================================================================================================================
 # CALCULATIONS
@@ -381,8 +372,7 @@ def get_start_end_dates(year, week_number):
 # CREATION AND MODIFICATION
 def check_create_weekly_file(arc, year, week):
     """
-    Checks the existence of a weekly file for a given ARC. If the file does not exist,
-    creates a new DataFrame with the specified columns and saves it to S3.
+    Checks the existence of a weekly file for a given ARC. If the file does not exist, creates a new DataFrame with the specified columns and saves it to S3.
 
     Parameters:
     - arc (str): The ARC identifier.
@@ -398,7 +388,7 @@ def check_create_weekly_file(arc, year, week):
     file_name = f"Ongoing_{arc}.csv"
 
     try:
-        df_existing = load_csv_from_local(file_name, sep=';', encoding='utf-8')
+        df_existing = load_csv_from_s3(BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     except Exception as e:
         # If the file does not exist or another error occurs, create a new DataFrame
         df_existing = pd.DataFrame(columns=CATEGORIES)
@@ -417,7 +407,7 @@ def check_create_weekly_file(arc, year, week):
         if rows:  # If there are new studies to add
             df_existing = pd.concat([df_existing, pd.DataFrame(rows)], ignore_index=True, sort=False)
             # Save the updated DataFrame to S3
-            save_csv_to_local(df_existing, file_name, sep=';', encoding='utf-8')
+            save_csv_to_s3(df_existing, BUCKET_NAME, file_name, sep=';', encoding='utf-8')
     else:
         st.error("Aucune étude n'a été affectée. Merci de voir avec vos managers.")
         return None
@@ -425,12 +415,9 @@ def check_create_weekly_file(arc, year, week):
     return file_name
 
 
-import os
-
-
 def delete_ongoing_file(arc):
     """
-    Deletes a specific "ongoing" file for an ARC in the local "imotion" folder.
+    Deletes a specific "ongoing" file for an ARC on S3, identified by its constructed name.
 
     Parameters:
     - arc (str): The ARC identifier whose ongoing file needs to be deleted.
@@ -442,17 +429,17 @@ def delete_ongoing_file(arc):
     - Exception: Raises an exception if deletion fails for any reason.
     """
     file_name = f"Ongoing_{arc}.csv"
-    file_path = os.path.join("imotion", file_name)
-
-    # Vérifier si le fichier existe avant de le supprimer
-    if os.path.exists(file_path):
-        try:
-            os.remove(file_path)
+    
+    # Deleting the file from the S3 bucket
+    try:
+        response = s3_client.delete_object(Bucket=BUCKET_NAME, Key=file_name)
+        if response['ResponseMetadata']['HTTPStatusCode'] == 204:
             print(f"Le fichier {file_name} a été supprimé avec succès.")
-        except Exception as e:
-            print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
-    else:
-        print(f"Le fichier {file_name} n'existe pas.")
+        else:
+            print(f"Erreur lors de la suppression du fichier {file_name}.")
+    except Exception as e:
+        # Handling potential errors during deletion
+        print(f"Erreur lors de la tentative de suppression du fichier {file_name} : {e}")
 
 
 # Validation et ajustement des valeurs pour s'assurer qu'elles n'ont que deux décimales
