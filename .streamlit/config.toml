@@ -17,3 +17,11 @@ textColor = "#250044"
 
 # Font family for all text in the app, except code blocks. One of "sans serif", "serif", or "monospace".
 #font =
+
+[server]
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+port = 8502
+#address = "0.0.0.0"
+baseUrlPath = ""
