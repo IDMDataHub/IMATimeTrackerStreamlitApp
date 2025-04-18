@@ -486,7 +486,7 @@ def main():
     None
     """
     try:
-        st.set_page_config(layout="wide", page_icon="📊", page_title="I-Motion Adult - Project Managers Space")
+        st.set_page_config(layout="wide", page_icon="📊", page_title="I-Motion Adulte - Espace Chef de Projet")
                 
     except:
         pass
